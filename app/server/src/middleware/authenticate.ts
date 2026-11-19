@@ -1,0 +1,44 @@
+/**
+ * Route protection, step 1: WHO is calling?
+ *
+ * Expects `Authorization: Bearer <access JWT>`. Verifies the signature and
+ * expiry, then re-checks the user's status on every request so that a
+ * suspension takes effect immediately rather than when the token expires.
+ * (The query is a single indexed lookup; permissions come from a cache.)
+ */
+import type { RequestHandler } from 'express';
+import { prisma } from '../lib/prisma.js';
+import { AppError, Unauthorized, Forbidden } from '../lib/errors.js';
+import { verifyAccessToken } from '../modules/auth/tokens.js';
+import { getAccessProfile } from '../modules/rbac/rbac.service.js';
+import { P } from '../modules/rbac/permissions.js';
+import { maintenanceMessage, settings } from '../modules/settings/general.js';
+
+export const authenticate: RequestHandler = async (req, _res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) throw Unauthorized();
+
+  const claims = verifyAccessToken(header.slice(7)); // throws 401 on bad/expired token
+
+  const user = await prisma.user.findUnique({
+    where: { id: claims.sub },
+    select: { id: true, email: true, timezone: true, status: true, tokenVersion: true, isGuest: true },
+  });
+  if (!user || user.isGuest || user.tokenVersion !== claims.tv) throw Unauthorized('Session expired', 'TOKEN_REVOKED');
+  if (user.status !== 'ACTIVE') throw Forbidden('Account is not active', `ACCOUNT_${user.status}`);
+
+  const access = await getAccessProfile(user.id);
+  // Maintenance mode locks everyone except administrators out of the API.
+  if (settings().maintenance.enabled && !access.permissions.has(P.SETTINGS_MANAGE)) {
+    throw new AppError(503, 'MAINTENANCE', maintenanceMessage());
+  }
+  req.auth = {
+    userId: user.id,
+    email: user.email,
+    timezone: user.timezone,
+    roles: access.roles,
+    permissions: access.permissions,
+    can: (p) => access.permissions.has(p),
+  };
+  next();
+};

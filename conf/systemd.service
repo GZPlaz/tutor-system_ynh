@@ -1,0 +1,36 @@
+[Unit]
+Description=MindAccel Tutoring (__APP__)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/server
+Environment="PATH=__PATH_WITH_NODEJS__"
+ExecStart=__NODEJS_DIR__/node --env-file=__INSTALL_DIR__/.env dist/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+StandardOutput=append:/var/log/__APP__/__APP__.log
+StandardError=inherit
+
+# ---- Hardening (the app only needs to write its uploads) ----
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=__DATA_DIR__
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

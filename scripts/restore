@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Restoring the app's files..."
+ynh_restore "$install_dir"
+ynh_restore "$data_dir"
+chown -R "$app:$app" "$install_dir" "$data_dir"
+
+ynh_script_progression "Restoring the database..."
+ynh_psql_db_shell < ./db.sql
+
+ynh_script_progression "Restoring system configurations related to $app..."
+write_cli_wrapper
+ynh_config_add_nginx
+ynh_config_add_systemd
+
+mkdir -p "/var/log/$app"
+touch "/var/log/$app/$app.log"
+chown -R "$app:$app" "/var/log/$app"
+yunohost service add "$app" --description="MindAccel Tutoring" --log="/var/log/$app/$app.log"
+ynh_config_add_logrotate
+
+ynh_script_progression "Starting $app's systemd service..."
+ynh_systemctl --service="$app" --action="start" --wait_until="MindAccel API listening" --log_path="/var/log/$app/$app.log"
+
+ynh_script_progression "Restoration completed for $app"

@@ -1,0 +1,93 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/master/schemas/manifest.v2.schema.json
+
+packaging_format = 2
+
+id = "mindaccel"
+name = "MindAccel Tutoring"
+description.en = "Free tutoring platform: booking, Google Meet sessions, resource hub and classes."
+
+version = "4.1.0~ynh1"
+
+maintainers = ["MindAccel"]
+
+[upstream]
+license = "LicenseRef-MindAccel"
+license_url = "https://mindaccel.org"
+website = "https://mindaccel.org"
+
+[integration]
+yunohost = ">= 12.1.0"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = false
+
+# The app has its own accounts (students, tutors, admins), not YunoHost users.
+ldap = false
+sso = false
+
+disk = "800M"
+ram.build = "1G"
+ram.runtime = "150M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/"
+
+    [install.init_main_permission]
+    type = "group"
+    # Students and parents sign up on the website, so it must be reachable by anyone.
+    default = "visitors"
+
+    [install.import_from]
+    ask.en = "Import data from an existing My Webapp instance (optional)"
+    help.en = "Type the app id of your current MindAccel site, e.g. my_webapp__5 (see `yunohost app list`). Its database, uploaded files and email settings are COPIED into this new app; the old site is not changed. Leave empty for a fresh, empty install."
+    type = "string"
+    optional = true
+
+    [install.admin_email]
+    ask.en = "Email address of the first administrator (optional)"
+    help.en = "Only needed for a fresh install. A one-time link to set the password is printed at the end of the installation. Not needed when importing existing data (your existing administrators come with it)."
+    type = "email"
+    optional = true
+
+    [install.smtp_user]
+    ask.en = "Google/Gmail address used to send emails (optional)"
+    help.en = "Approvals, booking confirmations and reminders are sent from here. Leave empty to set it up later in /var/www/mindaccel/.env. Ignored when importing (the old settings are copied)."
+    type = "email"
+    optional = true
+
+    [install.smtp_password]
+    ask.en = "App password for that address (optional)"
+    help.en = "A Google 'App Password' (16 letters), not your normal password."
+    type = "password"
+    optional = true
+
+[resources]
+
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+    subdirs = ["uploads", "backups"]
+
+    [resources.permissions]
+    main.url = "/"
+    # SSOwat would otherwise send a YunoHost "Authorization: Basic" header that the app's own
+    # login (Bearer tokens) would mistake for a bad token.
+    main.auth_header = false
+
+    [resources.ports]
+
+    [resources.apt]
+    packages = "rsync, build-essential, python3, openssl, curl"
+
+    [resources.database]
+    type = "postgresql"
+
+    [resources.nodejs]
+    version = "22"

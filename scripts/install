@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+# Fail early (before anything is built) if the requested import source doesn't exist.
+if [[ -n "${import_from:-}" ]]; then
+    [[ -n "$(yunohost app setting "$import_from" db_name 2>/dev/null)" ]] \
+        || die "There is no installed app called '$import_from' with a database. Check the id with: yunohost app list"
+fi
+
+ynh_script_progression "Setting up source files..."
+sync_app_source
+
+ynh_script_progression "Adding configuration..."
+jwt_secret="$(ynh_string_random --length=64)"
+ynh_app_setting_set --key=jwt_secret --value="$jwt_secret"
+write_env_file
+write_cli_wrapper
+
+build_app
+
+if [[ -n "${import_from:-}" ]]; then
+    ynh_script_progression "Copying the data of $import_from (database, uploads, email settings)..."
+    bash "$install_dir/bin/import-legacy.sh" --app "$app" --from "$import_from" --yes --copy-env --no-service --skip-migrate
+fi
+
+migrate_database
+if [[ -n "${import_from:-}" ]]; then legacy_payment_warnings; fi
+
+ynh_script_progression "Adding system configurations related to $app..."
+ynh_config_add_nginx
+ynh_config_add_systemd
+
+mkdir -p "/var/log/$app"
+touch "/var/log/$app/$app.log"
+chown -R "$app:$app" "/var/log/$app"
+yunohost service add "$app" --description="MindAccel Tutoring" --log="/var/log/$app/$app.log"
+ynh_config_add_logrotate
+
+ynh_script_progression "Starting $app's systemd service..."
+ynh_systemctl --service="$app" --action="start" --wait_until="MindAccel API listening" --log_path="/var/log/$app/$app.log"
+
+if [[ -n "${admin_email:-}" && -z "${import_from:-}" ]]; then
+    ynh_script_progression "Creating the first administrator..."
+    admin_output="$("$install_dir/bin/mindaccel" create-admin "$admin_email" 2>&1)" || admin_output="Could not create the administrator automatically. Run later: sudo mindaccel create-admin $admin_email"
+    ynh_print_info "$admin_output"
+fi
+
+ynh_script_progression "Installation of $app completed"

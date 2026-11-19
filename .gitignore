@@ -1,0 +1,9 @@
+# Dependencies and build output are recreated on the server by the installer.
+node_modules/
+dist/
+# Never commit real configuration or secrets.
+.env
+!.env.example
+!.env.test
+*.log
+.DS_Store

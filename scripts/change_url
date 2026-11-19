@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Stopping $app's systemd service..."
+ynh_systemctl --service="$app" --action="stop"
+
+ynh_script_progression "Updating NGINX web server configuration..."
+ynh_config_change_url_nginx
+
+# The public address is used in emails and cookies, and the URL path is baked into the web app build.
+ynh_script_progression "Updating the app's address..."
+ENV_FILE="$install_dir/.env"
+env_set APP_URL "https://${new_domain}${new_path%/}"
+if [[ "$new_path" != "$old_path" ]]; then
+    ynh_script_progression "Rebuilding the web app for the new path..."
+    build_client "$new_path"
+fi
+
+ynh_script_progression "Starting $app's systemd service..."
+ynh_systemctl --service="$app" --action="start" --wait_until="MindAccel API listening" --log_path="/var/log/$app/$app.log"
+
+ynh_script_progression "Change of URL completed for $app"

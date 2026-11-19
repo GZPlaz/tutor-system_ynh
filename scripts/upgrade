@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Stopping $app's systemd service..."
+ynh_systemctl --service="$app" --action="stop"
+
+ynh_script_progression "Upgrading source files..."
+sync_app_source
+
+# Configuration is the admin's: never rewritten, only topped up with keys a newer version needs.
+ynh_script_progression "Checking configuration..."
+env_add_if_missing CLIENT_DIST_DIR "$install_dir/client/dist"
+write_cli_wrapper
+
+build_app
+migrate_database
+legacy_payment_warnings
+
+ynh_script_progression "Upgrading system configurations related to $app..."
+ynh_config_add_nginx
+ynh_config_add_systemd
+
+mkdir -p "/var/log/$app"
+touch "/var/log/$app/$app.log"
+chown -R "$app:$app" "/var/log/$app"
+yunohost service add "$app" --description="MindAccel Tutoring" --log="/var/log/$app/$app.log"
+ynh_config_add_logrotate
+
+ynh_script_progression "Starting $app's systemd service..."
+ynh_systemctl --service="$app" --action="start" --wait_until="MindAccel API listening" --log_path="/var/log/$app/$app.log"
+
+ynh_script_progression "Upgrade of $app completed"

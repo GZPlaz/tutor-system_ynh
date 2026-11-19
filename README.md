@@ -1,67 +1,43 @@
-# MindAccel Tutoring Platform
+# MindAccel Tutoring — YunoHost package (v4.1)
 
-Scheduling, virtual-session and resource platform for MindAccel Tutoring — runs on a YunoHost **My Webapp** instance (`my_webapp__5`) with its PostgreSQL database.
-
-**Deploying?** → [docs/DEPLOY_YUNOHOST.md](docs/DEPLOY_YUNOHOST.md) (install → configure SMTP → deploy → create admin → doctor).
-
-| Doc | What's in it |
-| --- | --- |
-| [docs/DEPLOY_YUNOHOST.md](docs/DEPLOY_YUNOHOST.md) | Step-by-step deployment, releases & rollback, backups, troubleshooting |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack rationale, data model, RBAC, approvals, scheduling/timezones, email, billing, security, screens, tests |
-| [server/prisma/schema.prisma](server/prisma/schema.prisma) | Data model (source of truth for the app) |
-| [server/prisma/migrations/0001_init/migration.sql](server/prisma/migrations/0001_init/migration.sql) | Full PostgreSQL schema incl. anti-double-booking constraints |
-
-## Features
-
-- **Accounts & access:** student self-registration with admin approval; invited staff accounts; dynamic roles with selectable permissions; audit log.
-- **Scheduling:** services, tutor weekly availability + time off, timezone/DST-correct slot finder, booking with database-enforced no-double-booking, cancellation cutoff, session outcomes.
-- **Session Feed:** tutors post Google Meet links shortly before each session; students get a Join button and an email.
-- **Resource Hub:** files (PDF, Office, media), links and videos in folders/tags, assigned to students or classes, with due dates.
-- **Email (Google SMTP):** registration, approval/rejection, invites, password reset, booking confirmed/cancelled, 24 h + 1 h reminders, link posted, tutor nudge — via a retrying outbox.
-- **Billing groundwork:** plans, subscriptions, payments, webhook idempotency, provider interface and entitlement checks (off until enabled).
-
-## Stack
-
-Node.js 24 LTS · Express 5 · TypeScript · Prisma · PostgreSQL · zod · Argon2id · Luxon · React 19 + Vite · nginx (YunoHost) · systemd
-
-## Repository layout
+MindAccel runs as its **own YunoHost app**: its own Node.js service (`mindaccel`), its own PostgreSQL database, its own nginx entry and its own address. It no longer lives inside My Webapp.
 
 ```
-mindaccel/
-├── server/                    Express API
-│   ├── prisma/                schema + SQL migrations
-│   ├── .env.example           every setting, documented
-│   └── src/
-│       ├── config/ lib/ middleware/
-│       ├── modules/           auth · users · rbac · scheduling · sessions · resources · email · billing · audit
-│       ├── jobs/              email outbox, reminders, cleanup
-│       └── cli/create-admin.ts
-├── client/                    React SPA
-│   └── src/{auth,components,lib,pages,pages/admin}
-├── deploy/
-│   ├── install.sh             one-time server setup
-│   ├── deploy.sh              build → test → backup → migrate → switch → health check → auto-rollback
-│   ├── create-admin.sh        bootstrap an administrator
-│   ├── doctor.sh              end-to-end health & config check
-│   ├── nginx/mindaccel.conf   API proxy + SPA deep links (My Webapp extension point)
-│   └── systemd/mindaccel-api.service
-└── docs/
+sudo yunohost app install /path/to/mindaccel_ynh
 ```
 
-## Local development
+## What's new in v4.1 — everything is free
 
-```bash
-# API (needs a local PostgreSQL 13+)
-cd server
-cp .env.example .env     # NODE_ENV=development, APP_URL=http://localhost:5173, local DATABASE_URL, EMAIL_ENABLED=false
-npm install
-npx prisma migrate deploy
-npm run dev              # http://127.0.0.1:3105/api/health
-npm test                 # 18 unit tests
-npm run build && node --env-file=.env dist/cli/create-admin.js you@example.com
+All paywall features are gone: Stripe checkout, pay-per-session, packages and credits, monthly plans, *Admin → Payments*, *Plan & payments*, service prices and payment emails. Every service is free to book, with or without an account.
 
-# Web
-cd ../client
-npm install
-npm run dev              # http://localhost:5173 (proxies /api → :3105)
+- **Nothing financial is deleted.** Past payments, plans, subscriptions and credits stay in the database as read-only history.
+- **Migration `0005`** turns requests that were waiting for payment into normal free requests and retires queued payment emails. It is additive: no table or column is dropped.
+- **Stripe keeps charging active subscriptions until you cancel them in the Stripe dashboard.** The upgrade and `mindaccel doctor` warn while any remain.
+- The old `/billing` and `/admin/payments` addresses redirect.
+
+## What's new in v4
+
+| | |
+|---|---|
+| **Standalone app** | Proper YunoHost package: install, upgrade, backup/restore, change-url and remove all work through YunoHost. One Node service serves both the website and the API; nginx only forwards. Node.js 22 is installed and managed by YunoHost. |
+| **Settings** (Admin → Settings) | New accounts: open or invitation-only, approval on/off, allowed email domains, email admins. Booking: account required or not, plus the scheduling rules that used to live in `.env`. Maintenance mode. |
+| **Booking without an account** | Optional. Visitors book with a name and email and manage the booking through a private emailed link. Free services only. Signing up later keeps their history. |
+| **Data migration** | `mindaccel import-legacy` / install-time "import from My Webapp": copies database, uploads and email settings, verifies row counts, never touches the old site. Re-runnable for the final cut-over. |
+| **Database migration 0004** | Adds the guest flag. Additive only; applied automatically. |
+| **Tools** | `mindaccel doctor`, `verify`, `create-admin`, `migrate`, `status`. |
+
+See `doc/MIGRATION.md` for the move from My Webapp and `doc/ADMIN.md` for day-to-day administration.
+
+## Layout
+
 ```
+manifest.toml          what to ask, what resources YunoHost provisions
+scripts/               install · upgrade · remove · backup · restore · change_url · _common.sh
+conf/                  nginx.conf · systemd.service · import-legacy.sh · doctor.sh
+doc/                   admin guide, migration guide, install/upgrade messages
+app/server, app/client the application itself (Express 5 + Prisma + React)
+```
+
+## Developing the app itself
+
+`app/server` and `app/client` are the same project as before: `npm ci && npm test` in `app/server` (37 unit tests), `npm run typecheck` in both.
