@@ -14,7 +14,7 @@ The new app is a separate YunoHost app with its own service, its own database an
 
 ## Why a copy, not a live link to the old database?
 
-YunoHost creates one database per app and deletes it when that app is removed. If the new app pointed at `my_webapp__5`'s database, removing My Webapp later (or restoring a backup of it) would silently destroy the new app's data. A copy gives the new app a database of its own and lets you roll back for as long as you like. The database structure is updated automatically on first start (migration `0004`, additive only — nothing is removed or rewritten).
+YunoHost creates one database per app and deletes it when that app is removed. If the new app pointed at `my_webapp__5`'s database, removing My Webapp later (or restoring a backup of it) would silently destroy the new app's data. A copy gives the new app a database of its own and lets you roll back for as long as you like. The installer then brings the copied database up to date (migrations `0004`–`0006`: site settings and guest bookings, removal of payment features, study packets). Payment records are kept as history; no people, bookings or resources are removed.
 
 ## Step by step
 
@@ -49,7 +49,7 @@ sudo systemctl stop mindaccel-api                                    # old site'
 sudo mindaccel import-legacy --from my_webapp__5 --replace --copy-env
 ```
 
-`--replace` makes a safety dump of the new app's current database first (`/home/yunohost.app/mindaccel/backups/`). Then give the new app the public address:
+`--replace` makes a safety dump of the new app's current database first (`/home/yunohost.app/mindaccel/backups/`). The free study packets on the new app (the bundled ones and any you uploaded while testing) are kept: the import saves them before replacing the database and puts them back afterwards. Then give the new app the public address:
 
 ```
 sudo yunohost app change-url my_webapp__5 -d old.example.org -p /   # move the old site out of the way

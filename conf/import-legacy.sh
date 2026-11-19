@@ -112,6 +112,24 @@ if [[ "$TABLES" -gt 0 ]]; then
   ok "Saved ${SAFETY}"
 fi
 
+# ---- 1b. keep this app's study packets ------------------------------------------
+# The old My Webapp site has no study packets, so replacing the database would drop the
+# packets that exist here (bundled ones and any uploaded while testing the new site).
+# Save them now and put them back after the migrations recreate their table. Their files
+# live in uploads/ and are not touched by the import.
+PACKETS_SAVE=""; PACKETS_SEEDED=""
+if [[ "$TABLES" -gt 0 && "$(sql_value "$NEW_DB" "SELECT to_regclass('public.study_packets') IS NOT NULL")" == "t" ]]; then
+  PACKET_COUNT="$(sql_value "$NEW_DB" "SELECT count(*) FROM public.study_packets")"
+  if [[ "$PACKET_COUNT" -gt 0 ]]; then
+    say "Saving ${PACKET_COUNT} study packet(s)"
+    PACKETS_SAVE="$(mktemp)"
+    # Uploader links are dropped (set to NULL): that account may not exist in the old database.
+    runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -d "$NEW_DB" \
+      -c "\\copy (SELECT id, title, description, subject, page_count, storage_key, original_name, mime_type, size_bytes, is_published, sort_order, download_count, seed_key, NULL::uuid, created_at, updated_at FROM public.study_packets) TO pstdout" > "$PACKETS_SAVE"
+    PACKETS_SEEDED="$(sql_value "$NEW_DB" "SELECT value::text FROM public.app_settings WHERE key = 'packets.seeded'" || true)"
+  fi
+fi
+
 # ---- 2. copy the database -----------------------------------------------------
 say "Copying the database ${OLD_DB} → ${NEW_DB}"
 psql_root -d "$NEW_DB" <<SQL
@@ -180,6 +198,24 @@ fi
 if [[ "$MIGRATE" -eq 1 ]]; then
   say "Applying new database migrations"
   "$INSTALL_DIR/bin/mindaccel" migrate
+fi
+# ---- 5b. put the study packets back ---------------------------------------------------
+if [[ -n "$PACKETS_SAVE" ]]; then
+  if [[ "$MIGRATE" -eq 1 ]]; then
+    say "Restoring the study packets"
+    runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -d "$NEW_DB" \
+      -c "\\copy public.study_packets (id, title, description, subject, page_count, storage_key, original_name, mime_type, size_bytes, is_published, sort_order, download_count, seed_key, created_by_id, created_at, updated_at) FROM pstdin" < "$PACKETS_SAVE"
+    if [[ -n "$PACKETS_SEEDED" ]]; then
+      runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -d "$NEW_DB" -v seeded="$PACKETS_SEEDED" <<'SQL'
+INSERT INTO public.app_settings (key, value, updated_at) VALUES ('packets.seeded', :'seeded'::jsonb, now())
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+SQL
+    fi
+    ok "Restored $(sql_value "$NEW_DB" "SELECT count(*) FROM public.study_packets") study packet(s)"
+  else
+    warn "Study packets were not restored (--skip-migrate). Their files are still in ${DATA_DIR}/uploads; upload them again in Admin → Study packets."
+  fi
+  rm -f "$PACKETS_SAVE"
 fi
 if [[ "$MANAGE_SERVICE" -eq 1 ]]; then
   say "Starting ${APP}"; systemctl start "$APP"

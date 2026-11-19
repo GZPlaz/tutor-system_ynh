@@ -125,11 +125,11 @@ def make_doc(path: Path, title: str, subject: str):
         canvas.setFillColor(colors.white)
         canvas.setFont("Body-Bold", 8.5)
         canvas.drawString(0.75 * inch, h - 0.21 * inch, "MINDACCEL TUTORING  ·  FREE STUDY PACKET")
-        canvas.drawRightString(w - 0.75 * inch, h - 0.21 * inch, subject.upper())
+        canvas.drawRightString(w - 0.75 * inch, h - 0.21 * inch, title.upper())
         canvas.setFillColor(MUTED)
         canvas.setFont("Body", 7.5)
         canvas.drawString(0.75 * inch, 0.45 * inch, "ACT® is a registered trademark of ACT Education Corp., which does not sponsor or endorse this packet.")
-        canvas.drawRightString(w - 0.75 * inch, 0.45 * inch, f"{title}  ·  Page {doc.page} of {PAGES}")
+        canvas.drawRightString(w - 0.75 * inch, 0.45 * inch, f"Page {doc.page} of {PAGES}")
         canvas.restoreState()
 
     doc = SimpleDocTemplate(
@@ -154,7 +154,7 @@ def build(path: Path, title: str, subject: str, pages: list[list]):
     print(f"wrote {path.relative_to(ROOT)} ({n} pages, {path.stat().st_size // 1024} KB)")
 
 
-def cover(subject: str, title: str, blurb: str, facts: list[tuple[str, str]], contents: list[tuple[str, str]], steps: list[str], tips_title: str, tips: list[str]):
+def cover(subject: str, title: str, blurb: str, facts: list[tuple[str, str]], contents: list[tuple[str, str]], steps: list[str], tips_title: str, tips: list[str], number: int = 1):
     facts_t = Table([[P(f"<b>{v}</b>", "center") for _, v in facts], [P(k, "muted") for k, _ in facts]], colWidths=[1.75 * inch] * len(facts))
     facts_t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), BRAND_SOFT),
@@ -168,7 +168,7 @@ def cover(subject: str, title: str, blurb: str, facts: list[tuple[str, str]], co
     contents_t = grid([["Page", "What's on it"]] + [[a, P(b, "small")] for a, b in contents], [0.8 * inch, 6.2 * inch])
     return [
         Spacer(1, 6),
-        P(subject.upper() + "  ·  PRACTICE PACKET 1", "eyebrow"),
+        P(f"{subject.upper()}  ·  PRACTICE PACKET {number}", "eyebrow"),
         P(title, "h1"),
         P(blurb, "body"),
         Spacer(1, 6),
