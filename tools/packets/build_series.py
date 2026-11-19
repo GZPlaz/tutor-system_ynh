@@ -32,6 +32,7 @@ import build_act_packets as base  # noqa: E402
 from build_act_packets import ACCENT_SOFT, LINE, OUT, P, answer_grid, boxed, cover, explanations, grid, letters  # noqa: E402
 import content_english  # noqa: E402
 import content_math  # noqa: E402
+import content_reading_science  # noqa: E402
 
 base.PAGES = 10
 base.S["lesson"] = base.ParagraphStyle("lesson", parent=base.S["body"], leftIndent=12, firstLineIndent=-9, spaceAfter=4)
@@ -68,13 +69,21 @@ SCORE_ROWS = [["Correct (out of 30)", "27–30", "23–26", "18–22", "12–17"
               ["Where you are", "Excellent", "Strong", "Solid", "Building", "Getting started"]]
 
 
+def score_rows(total: int):
+    if total == 30:
+        return SCORE_ROWS
+    cuts = [round(total * f) for f in (0.9, 0.77, 0.6, 0.4)]
+    bands = [f"{cuts[0]}–{total}", f"{cuts[1]}–{cuts[0] - 1}", f"{cuts[2]}–{cuts[1] - 1}", f"{cuts[3]}–{cuts[2] - 1}", f"0–{cuts[3] - 1}"]
+    return [[f"Correct (out of {total})", *bands], SCORE_ROWS[1]]
+
+
 def key_and_explanations(answers, explain, tracker_title, tracker_rows, tracker_widths):
     return [
         P("Answer key", "h2"),
         answer_grid(answers),
         Spacer(1, 8),
         P("How did you do?", "h3"),
-        grid(SCORE_ROWS, [1.5 * inch] + [1.1 * inch] * 5),
+        grid(score_rows(len(answers)), [1.5 * inch] + [1.1 * inch] * 5),
         P("These bands describe this packet only. They are not official ACT scores.", "muted"),
         P("Explanations", "h2"),
         *explanations(explain, "eq"),
@@ -109,7 +118,8 @@ def subject_of(spec, default: str) -> str:
 def as_number(choice: str):
     s = re.sub(r"<[^>]+>", "", choice)
     s = s.replace("$", "").replace(",", "").replace("%", "").replace("°", "").replace("−", "-")
-    s = re.sub(r"\s*(ft|g|miles)$", "", s.strip())
+    s = re.sub(r"\s*(ft|g|miles|cm|m|mL|kPa|s|C|°C)$", "", s.strip())
+    s = re.sub(r"^(about|pH)\s+", "", s, flags=re.I)
     try:
         return Fraction(s)
     except (ValueError, ZeroDivisionError):
@@ -279,20 +289,114 @@ def build_english(spec):
 
 
 # ---------------------------------------------------------------------------
+# Reading & Science: passages (or data) + questions with their own stems
+# ---------------------------------------------------------------------------
 
-def write(spec, subject, pages):
+def data_table(rows):
+    T(" ".join(" ".join(r) for r in rows))
+    cols = len(rows[0])
+    width = 3.75 * inch
+    first = min(1.5 * inch, width / cols * 1.6) if cols > 3 else width / cols
+    rest = (width - first) / (cols - 1)
+    return grid(rows, [first] + [rest] * (cols - 1), font_size=8)
+
+
+def build_passages(spec, subject_default):
+    answers, explain, skills, pages = {}, [], {}, []
+    roman = ["I", "II", "III", "IV", "V", "VI"]
+    passages = spec["passages"]
+    lesson_pages = 1
+    key_page = 1 + lesson_pages + len(passages) + 1
+    q_total = sum(len(p["questions"]) for p in passages)
+    n = 0
+    for p_i, passage in enumerate(passages):
+        first = n + 1
+        left = [P(T(f"Passage {roman[p_i]}: {passage['title']}"), "h3")]
+        for para in passage["paras"]:
+            if isinstance(para, list):
+                left += [Spacer(1, 2), data_table(para), Spacer(1, 6)]
+            elif para.startswith("Table"):
+                left.append(P(T(f"<i>{para}</i>"), "tiny"))
+            else:
+                left.append(P(T(para), "passage"))
+        right = []
+        for choices, correct, expl, skill, stem in passage["questions"]:
+            n += 1
+            assert correct == 0, (spec["slug"], n)
+            T(stem), [T(c) for c in choices]
+            ordered, idx = order_choices(choices, f"{spec['slug']}-{n}")
+            answers[n] = letters(n)[idx]
+            explain.append((n, answers[n], T(expl)))
+            skills.setdefault(skill, []).append(n)
+            right.append(P(f"<b>{n}.</b>  {stem}", "eq"))
+            right += [P(f"<b>{l}.</b>  {c}", "eqc") for l, c in zip(letters(n), ordered)]
+            right.append(Spacer(1, 5))
+        t = Table([[left, right]], colWidths=[3.85 * inch, 3.15 * inch])
+        t.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (0, 0), 0),
+            ("RIGHTPADDING", (0, 0), (0, 0), 12),
+            ("LEFTPADDING", (1, 0), (1, 0), 12),
+            ("LINEBEFORE", (1, 0), (1, 0), 0.6, LINE),
+        ]))
+        page = [P(f"Passage {roman[p_i]}  ·  Questions {first}–{n}", "h2"),
+                P(T(spec.get("instructions", "Read the passage, then choose the best answer to each question.")), "muted"), t]
+        if p_i == len(passages) - 1:
+            page += [Spacer(1, 8), P(f"<b>STOP.</b>  Note your end time, then check your answers on page {key_page}.", "center")]
+        pages.append(page)
+
+    subject = subject_of(spec, subject_default)
+    minutes = spec["minutes"]
+    last_passage_page = 2 + len(passages)
+    p1 = cover(
+        subject, spec["title"], T(spec["blurb"]),
+        [("passages", str(len(passages))), ("questions", str(q_total)), ("suggested time", f"{minutes} min"), ("per passage", f"~{minutes // len(passages)} min")],
+        [("1", "How to use the packet, and tips"),
+         ("2", "Lesson: the strategies, with examples"),
+         (f"3–{last_passage_page}", f"{len(passages)} practice passages, {q_total // len(passages)} questions each"),
+         (f"{key_page}+", "Answer key, score bands, an explanation for every question and a skills tracker")],
+        ["Read the lesson page first.",
+         f"Set a timer for {minutes} minutes and work through pages 3–{last_passage_page}.",
+         "Answer every question from the passage itself: point to the line or the number that proves your answer.",
+         f"Check your answers on page {key_page} and read the explanation for every question you missed or guessed on.",
+         "Tick the skills you missed in the tracker, then reread that part of the lesson."],
+        "Tips", [T(t) for t in spec.get("tips", [
+            "<b>Answer every question.</b> There is no penalty for guessing.",
+            "<b>Go back to the text.</b> The answer is always there; memory is not enough.",
+            "<b>Eliminate first.</b> Cross out choices that are too broad, too narrow or not in the passage.",
+            "<b>Mark and move.</b> If a question stalls you, guess, mark it and come back at the end.",
+        ])], number=spec["number"],
+    )
+    p2 = lesson_page(spec["lesson"], "Lesson: strategies that work")
+    tracker = two_up([[r, ", ".join(map(str, ns)), ""] for r, ns in sorted(skills.items())], ["Skill", "Questions", "Missed?"])
+    tail = key_and_explanations(answers, explain, "Skills tracker: what to study next", tracker, [1.6 * inch, 1.15 * inch, 0.75 * inch] * 2)
+    write(spec, subject, [p1, p2, *pages, tail], pages_hint=None)
+    return answers
+
+
+# ---------------------------------------------------------------------------
+
+def write(spec, subject, pages, pages_hint=10):
     # Pages 1-8 are one page each; the last block (key + explanations + tracker) flows over pages 9-10.
     from reportlab.platypus import PageBreak
-    doc, frame = base.make_doc(OUT / f"{spec['slug']}.pdf", spec["title"], subject)
-    story = []
-    for i, page in enumerate(pages):
-        story += page
-        if i < len(pages) - 1:
-            story.append(PageBreak())
-    doc.build(story, onFirstPage=frame, onLaterPages=frame)
     from pypdf import PdfReader
     path = OUT / f"{spec['slug']}.pdf"
-    n = len(PdfReader(str(path)).pages)
+
+    def render():
+        doc, frame = base.make_doc(path, spec["title"], subject)
+        story = []
+        for i, page in enumerate(pages):
+            story += page
+            if i < len(pages) - 1:
+                story.append(PageBreak())
+        doc.build(story, onFirstPage=frame, onLaterPages=frame)
+        return len(PdfReader(str(path)).pages)
+
+    base.PAGES = pages_hint or 99
+    n = render()
+    if pages_hint is None:
+        base.PAGES = n
+        n = render()
     if n != base.PAGES:
         sys.exit(f"{path.name} has {n} pages; expected {base.PAGES}.")
     print(f"wrote {path.relative_to(base.ROOT)} ({n} pages, {path.stat().st_size // 1024} KB)")
@@ -312,11 +416,17 @@ def check_glyphs():
 
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
+    only = sys.argv[1:]  # optional: build only packets whose slug contains one of these words
+    want = lambda spec: not only or any(w in spec["slug"] for w in only)  # noqa: E731
     summary = {}
-    for spec in content_math.PACKETS:
+    for spec in filter(want, content_math.PACKETS):
         summary[spec["slug"]] = build_math(spec)
-    for spec in content_english.PACKETS:
+    for spec in filter(want, content_english.PACKETS):
         summary[spec["slug"]] = build_english(spec)
+    for spec in filter(want, content_reading_science.READING):
+        summary[spec["slug"]] = build_passages(spec, "ACT Reading")
+    for spec in filter(want, content_reading_science.SCIENCE):
+        summary[spec["slug"]] = build_passages(spec, "ACT Science")
     check_glyphs()
     for slug, ans in summary.items():
         counts = {l: list(ans.values()).count(l) for l in "ABCDFGHJ"}

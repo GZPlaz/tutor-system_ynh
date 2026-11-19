@@ -111,6 +111,42 @@ export const BUNDLED_PACKETS = [
     pageCount: 10,
     sortOrder: 4,
   },
+  {
+    seedKey: "act-reading-main-ideas-details-1",
+    file: "act-reading-main-ideas-details.pdf",
+    title: "ACT Reading: Main Ideas & Details",
+    subject: "ACT Reading",
+    description: "A one-page reading strategy lesson, then four passages with 24 questions on main ideas, details, vocabulary in context and inference, with explanations.",
+    pageCount: 8,
+    sortOrder: 0,
+  },
+  {
+    seedKey: "act-reading-inference-craft-2",
+    file: "act-reading-inference-craft.pdf",
+    title: "ACT Reading: Inference & Author's Craft",
+    subject: "ACT Reading",
+    description: "A one-page lesson on inference, tone, purpose and point of view, then four passages with 24 questions and an explanation for every answer.",
+    pageCount: 8,
+    sortOrder: 1,
+  },
+  {
+    seedKey: "act-science-data-representation-1",
+    file: "act-science-data-representation.pdf",
+    title: "ACT Science: Reading Data",
+    subject: "ACT Science",
+    description: "A one-page lesson on reading tables and trends, then four data passages with 24 questions on values, trends, interpolation, prediction and variables, with explanations.",
+    pageCount: 8,
+    sortOrder: 0,
+  },
+  {
+    seedKey: "act-science-experiments-viewpoints-2",
+    file: "act-science-experiments-viewpoints.pdf",
+    title: "ACT Science: Experiments & Viewpoints",
+    subject: "ACT Science",
+    description: "A one-page lesson on experimental design and conflicting viewpoints, then four passages with 24 questions on variables, controls, predictions and competing hypotheses.",
+    pageCount: 8,
+    sortOrder: 1,
+  },
 ] as const;
 
 export async function seedBundledPackets(): Promise<void> {
