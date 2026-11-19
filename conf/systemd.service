@@ -21,7 +21,10 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes
 ProtectSystem=strict
-ProtectHome=yes
+# /home is replaced by an empty tmpfs; only the app's data folder (under /home/yunohost.app)
+# is mounted back in. ProtectHome=yes would hide it entirely, even with ReadWritePaths.
+ProtectHome=tmpfs
+BindPaths=__DATA_DIR__
 ReadWritePaths=__DATA_DIR__
 ProtectKernelTunables=yes
 ProtectKernelModules=yes

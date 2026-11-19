@@ -27,6 +27,17 @@ sync_app_source() {
     chown -R "$app:$app" "$install_dir"
 }
 
+# The data folder lives under /home/yunohost.app. Create its subfolders explicitly with the
+# right owner: the app writes uploads/ (Resource Hub files, logo, study packets); backups/
+# holds root-only safety dumps made by import-legacy.
+ensure_data_dirs() {
+    mkdir -p "$data_dir"
+    chown "$app:$app" "$data_dir"
+    chmod 0750 "$data_dir"
+    install -d -o "$app" -g "$app" -m 0750 "$data_dir/uploads"
+    install -d -o root -g root -m 0700 "$data_dir/backups"
+}
+
 # Run a command as the app's system user with Node.js on the PATH.
 run_as_app() { ynh_exec_as_app env PATH="$path_with_nodejs" HOME="$install_dir" "$@"; }
 
