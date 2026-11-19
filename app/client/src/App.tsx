@@ -21,6 +21,8 @@ import { ServicesPage } from './pages/admin/ServicesPage';
 import { RolesPage } from './pages/admin/RolesPage';
 import { BrandingPage } from './pages/admin/BrandingPage';
 import { ActivityPage } from './pages/admin/ActivityPage';
+import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
+import { PacketsPage } from './pages/PacketsPage';
 import { Empty } from './components/ui';
 
 const gate = (any: string[], element: ReactElement) => <Route element={<RequirePermission any={any} />}>{element}</Route>;
@@ -33,6 +35,8 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/booking/:id" element={<GuestBookingPage />} />
+      {/* Free study packets: open to everyone, signed in or not. */}
+      <Route path="/packets" element={<PacketsPage />} />
 
       {/* Booking works signed-in, or without an account when Admin → Settings allows it. */}
       <Route element={<BookShell />}>
@@ -49,6 +53,7 @@ export default function App() {
           {gate(['groups:manage'], <Route path="/classes" element={<ClassesPage />} />)}
           {gate(['users:read', 'users:approve'], <Route path="/admin/people" element={<PeoplePage />} />)}
           {gate(['services:manage'], <Route path="/admin/services" element={<ServicesPage />} />)}
+          {gate(['packets:manage'], <Route path="/admin/packets" element={<PacketsAdminPage />} />)}
           {gate(['roles:manage'], <Route path="/admin/roles" element={<RolesPage />} />)}
           {gate(['settings:manage'], <Route path="/admin/settings" element={<SettingsPage />} />)}
           {gate(['settings:manage'], <Route path="/admin/branding" element={<BrandingPage />} />)}

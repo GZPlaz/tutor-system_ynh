@@ -81,4 +81,7 @@ export async function downloadFile(path: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Absolute URL of an API path, for plain links that need no sign-in (public downloads). */
+export const apiUrl = (path: string) => `${API_BASE}${path}`;
+
 export { refresh as tryRefreshSession };

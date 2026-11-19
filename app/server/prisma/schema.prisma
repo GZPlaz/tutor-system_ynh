@@ -161,6 +161,7 @@ model User {
   resources           Resource[]
   resourceAssignments ResourceAssignment[] @relation("AssignmentStudent")
   assignmentsMade     ResourceAssignment[] @relation("AssignmentAssigner")
+  packetsUploaded     StudyPacket[]
 
   subscriptions  Subscription[]
   payments       Payment[]
@@ -514,6 +515,41 @@ model ResourceAssignment {
   @@index([studentId])
   @@index([groupId])
   @@map("resource_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// Free study packets (public page /packets, managed in Admin → Study packets)
+// -----------------------------------------------------------------------------
+
+/// A downloadable practice packet that anyone can get without an account.
+/// Files live in UPLOAD_DIR like Resource Hub files and are only served by the API.
+model StudyPacket {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String
+  description   String?
+  /// Subject heading on the public page, e.g. "ACT Math". Usually a service name.
+  subject       String
+  /// Optional, shown to visitors ("7 pages").
+  pageCount     Int?     @map("page_count")
+  storageKey    String   @map("storage_key")
+  originalName  String   @map("original_name")
+  mimeType      String   @map("mime_type")
+  sizeBytes     Int      @map("size_bytes")
+  /// Hidden packets stay in the admin list but are not shown or downloadable publicly.
+  isPublished   Boolean  @default(true) @map("is_published")
+  /// Lower numbers are listed first within a subject.
+  sortOrder     Int      @default(0) @map("sort_order")
+  downloadCount Int      @default(0) @map("download_count")
+  /// Set for packets that ship with the app (seeded once on first start).
+  seedKey       String?  @unique @map("seed_key")
+  createdById   String?  @map("created_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([isPublished, subject])
+  @@map("study_packets")
 }
 
 // -----------------------------------------------------------------------------

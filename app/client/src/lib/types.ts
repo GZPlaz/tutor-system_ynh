@@ -98,6 +98,29 @@ export interface Resource {
   }[];
 }
 
+/** A free study packet as shown on the public /packets page. */
+export interface PublicPacket {
+  id: string;
+  title: string;
+  description: string | null;
+  subject: string;
+  pageCount: number | null;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  updatedAt: string;
+}
+
+/** The admin view of a packet (Admin → Study packets). */
+export interface StudyPacket extends PublicPacket {
+  isPublished: boolean;
+  sortOrder: number;
+  downloadCount: number;
+  seedKey: string | null;
+  createdAt: string;
+  createdBy: { firstName: string; lastName: string } | null;
+}
+
 export interface PublicConfig {
   bookingMinLeadHours: number;
   bookingMaxHorizonDays: number;

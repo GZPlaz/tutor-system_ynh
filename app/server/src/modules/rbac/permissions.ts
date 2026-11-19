@@ -42,6 +42,7 @@ export const PERMISSIONS = {
   RESOURCES_ASSIGN: { key: 'resources:assign', category: 'Resources', description: 'Assign own resources to students/classes' },
   RESOURCES_MANAGE_ANY: { key: 'resources:manage_any', category: 'Resources', description: 'Manage every resource' },
   GROUPS_MANAGE: { key: 'groups:manage', category: 'Resources', description: 'Create classes and manage membership' },
+  PACKETS_MANAGE: { key: 'packets:manage', category: 'Resources', description: 'Upload, edit and remove the free study packets on the public /packets page' },
 
   // Platform
   AUDIT_READ: { key: 'audit:read', category: 'Platform', description: 'Read the audit log' },

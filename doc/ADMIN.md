@@ -6,7 +6,7 @@
 |---|---|
 | Program files | `/var/www/mindaccel/` (`server/`, `client/`, `docs/`, `bin/`) |
 | Configuration (email, secrets) | `/var/www/mindaccel/.env` — owner `mindaccel`, mode 600 |
-| Uploaded files (Resource Hub, logo) | `/home/yunohost.app/mindaccel/uploads/` |
+| Uploaded files (Resource Hub, study packets, logo) | `/home/yunohost.app/mindaccel/uploads/` |
 | Database | PostgreSQL database `mindaccel`, created and owned by YunoHost |
 | Service | `mindaccel` — `systemctl status mindaccel` |
 | Logs | `/var/log/mindaccel/mindaccel.log` (rotated automatically) |
@@ -20,6 +20,15 @@ No restart needed; changes apply within seconds.
 - **Maintenance mode** — locks everyone except administrators out (sign-ups and bookings pause) while you work.
 
 Branding, people, roles and services have their own pages in the Admin menu. There are no payment features: every session is free.
+
+### Free study packets (`/packets`)
+
+Anyone can open `/packets` and download the free practice packets without an account; the page is linked from the sign-in page and the menu. Manage them in **Admin → Study packets**:
+
+- **Upload packet**: a PDF or Word file, a title and a subject (packets are grouped under their subject; your service names are suggested). Optional: description, page count, order.
+- **Hide / Show** takes a packet off the public page without deleting it. **Edit** changes the details or replaces the file. The list shows how many times each packet was downloaded.
+- Two packets ship with the app (*ACT Math* and *ACT English*, 7 pages each) and are added on first start. Deleting one is permanent; it does not come back after a restart or upgrade. Their source is `tools/packets/build_act_packets.py`.
+- Access is the `packets:manage` permission (Admins have it; grant it to other roles in Admin → Roles).
 
 ### Booking without an account
 

@@ -137,6 +137,9 @@ export function LoginPage() {
           Just want to book a session? <Link to="/book">Book without an account</Link>.
         </p>
       )}
+      <p className="form-foot">
+        Studying on your own? <Link to="/packets">Get our free study packets</Link>.
+      </p>
     </AuthLayout>
   );
 }

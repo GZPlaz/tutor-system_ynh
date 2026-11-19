@@ -62,6 +62,7 @@ export function Shell() {
         { to: '/sessions', label: 'Sessions', icon: 'calendar', show: can('sessions:view_feed'), badge: counts.requests },
         { to: '/book', label: 'Book a session', icon: 'calendarPlus', show: can('bookings:create') },
         { to: '/resources', label: 'Resources', icon: 'book', show: canAny('resources:read_assigned', 'resources:create', 'resources:manage_any') },
+        { to: '/packets', label: 'Free packets', icon: 'download', show: true },
       ],
     },
     {
@@ -76,6 +77,7 @@ export function Shell() {
       items: [
         { to: '/admin/people', label: 'People', icon: 'user', show: canAny('users:read', 'users:approve'), badge: counts.pending },
         { to: '/admin/services', label: 'Services', icon: 'layers', show: can('services:manage') },
+        { to: '/admin/packets', label: 'Study packets', icon: 'file', show: can('packets:manage') },
         { to: '/admin/roles', label: 'Roles', icon: 'shield', show: can('roles:manage') },
         { to: '/admin/settings', label: 'Settings', icon: 'sliders', show: can('settings:manage') },
         { to: '/admin/branding', label: 'Branding', icon: 'palette', show: can('settings:manage') },

@@ -10,11 +10,13 @@ import { syncRbac } from './modules/rbac/rbac.service.js';
 import { verifySmtp } from './modules/email/mailer.js';
 import { startJobs, stopJobs } from './jobs/scheduler.js';
 import { loadSettings } from './modules/settings/general.js';
+import { seedBundledPackets } from './modules/packets/seed.js';
 
 async function main() {
   await prisma.$connect();
   await syncRbac();
   await loadSettings();
+  await seedBundledPackets();
   await verifySmtp();
 
   const server = createApp().listen(env.PORT, env.HOST, () => {
