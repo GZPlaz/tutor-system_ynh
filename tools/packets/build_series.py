@@ -91,6 +91,17 @@ def two_up(items: list[list[str]], header: list[str]):
     return rows
 
 
+def subject_of(spec, default: str) -> str:
+    """The subject printed on the cover and page headers: an explicit "subject" key,
+    else the part of the title before the colon ("AP Biology: Cell Respiration"
+    -> "AP Biology"), else the default."""
+    if spec.get("subject"):
+        return spec["subject"]
+    if ":" in spec["title"]:
+        return spec["title"].split(":", 1)[0].strip()
+    return default
+
+
 # ---------------------------------------------------------------------------
 # Math
 # ---------------------------------------------------------------------------
@@ -145,7 +156,7 @@ def build_math(spec):
 
     minutes = spec["minutes"]
     p1 = cover(
-        "ACT Math", spec["title"], T(spec["blurb"]),
+        subject_of(spec, "ACT Math"), spec["title"], T(spec["blurb"]),
         [("questions", "30"), ("suggested time", f"{minutes} min"), ("answer choices", "4 each"), ("calculator", "Allowed")],
         [("1", "How to use the packet, and tips for this topic"),
          ("2–3", "Lessons: the rules and formulas you need, each with a worked example"),
@@ -170,7 +181,7 @@ def build_math(spec):
     tracker = two_up([[t, ", ".join(map(str, ns)), ""] for t, ns in sorted(topics.items())], ["Topic", "Questions", "Missed?"])
     tail = key_and_explanations(answers, explain, "Topic checklist: what to study next", tracker, [1.5 * inch, 1.25 * inch, 0.75 * inch] * 2)
     pages = [p1, p2, p3, *q_pages, tail]
-    write(spec, "ACT Math", pages)
+    write(spec, subject_of(spec, "ACT Math"), pages)
     return answers
 
 
@@ -246,7 +257,7 @@ def build_english(spec):
         pages.append(page)
 
     p1 = cover(
-        "ACT English", spec["title"], T(spec["blurb"]),
+        subject_of(spec, "ACT English"), spec["title"], T(spec["blurb"]),
         [("passages", "5"), ("questions", "30"), ("suggested time", "18 min"), ("per question", "~35 sec")],
         [("1", "How to use the packet, and tips for this topic"),
          ("2–3", "Lessons: the rules, with right and wrong examples"),
@@ -263,7 +274,7 @@ def build_english(spec):
     p3 = lesson_page(spec["lesson"][1], "Lesson (continued)")
     tracker = two_up([[r, ", ".join(map(str, ns)), ""] for r, ns in sorted(rules.items())], ["Rule", "Questions", "Missed?"])
     tail = key_and_explanations(answers, explain, "Rule tracker: what to study next", tracker, [1.6 * inch, 1.15 * inch, 0.75 * inch] * 2)
-    write(spec, "ACT English", [p1, p2, p3, *pages, tail])
+    write(spec, subject_of(spec, "ACT English"), [p1, p2, p3, *pages, tail])
     return answers
 
 
