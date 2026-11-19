@@ -30,10 +30,9 @@ export function PacketsPage() {
   return (
     <PublicFrame wide>
       <header className="packets-hero">
-        <p className="eyebrow"><Icon name="sparkle" size={16} /> Free for everyone</p>
         <h1>Free study packets</h1>
         <p className="muted">
-          Practice packets written by our tutors. Open them in your browser or download and print them. No account needed.
+          Practice packets written by our tutors, free to download and print. No account needed.
         </p>
       </header>
 
@@ -59,29 +58,25 @@ export function PacketsPage() {
             <section key={name} className="packet-subject" aria-labelledby={`subject-${name}`}>
               <h2 id={`subject-${name}`}>{name}</h2>
               <ul className="packet-list">
-                {items.map((p) => (
-                  <li key={p.id} className="packet-card">
-                    <span className="packet-icon" aria-hidden><Icon name="file" size={26} /></span>
-                    <div className="packet-body">
-                      <h3>{p.title}</h3>
-                      {p.description && <p>{p.description}</p>}
-                      <p className="packet-meta">
-                        {fileKind(p.mimeType)}
-                        {p.pageCount ? ` · ${p.pageCount} page${p.pageCount > 1 ? 's' : ''}` : ''} · {fmtBytes(p.sizeBytes)}
-                      </p>
-                    </div>
-                    <div className="packet-actions">
-                      {p.mimeType === 'application/pdf' && (
-                        <a className="btn secondary" href={apiUrl(`/public/packets/${p.id}/download?view=1`)} target="_blank" rel="noopener">
-                          <Icon name="external" size={18} /> Open
-                        </a>
-                      )}
-                      <a className="btn primary" href={apiUrl(`/public/packets/${p.id}/download`)} download={p.originalName}>
-                        <Icon name="download" size={18} /> Download
+                {items.map((p) => {
+                  const pdf = p.mimeType === 'application/pdf';
+                  const href = apiUrl(`/public/packets/${p.id}/download${pdf ? '?view=1' : ''}`);
+                  return (
+                    <li key={p.id} className="packet-row">
+                      <div className="packet-body">
+                        <h3><a href={href} target={pdf ? '_blank' : undefined} rel="noopener">{p.title}</a></h3>
+                        {p.description && <p>{p.description}</p>}
+                        <p className="packet-meta">
+                          {fileKind(p.mimeType)}
+                          {p.pageCount ? `, ${p.pageCount} page${p.pageCount > 1 ? 's' : ''}` : ''}, {fmtBytes(p.sizeBytes)}
+                        </p>
+                      </div>
+                      <a className="btn secondary packet-download" href={apiUrl(`/public/packets/${p.id}/download`)} download={p.originalName}>
+                        <Icon name="download" size={16} /> Download
                       </a>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))}
@@ -90,12 +85,12 @@ export function PacketsPage() {
 
       <aside className="panel packets-cta">
         <div>
-          <h2 className="panel-title">Want help working through a packet?</h2>
-          <p className="muted">Our tutors can go over every question with you in a one-on-one session, for free.</p>
+          <h2 className="panel-title">Want help with a packet?</h2>
+          <p className="muted">A tutor can go through it with you in a free one-to-one session.</p>
         </div>
         <div className="button-row">
           {config?.guestBooking ? (
-            <Link to="/book" className="btn primary"><Icon name="calendarPlus" size={18} /> Book a session</Link>
+            <Link to="/book" className="btn primary">Book a session</Link>
           ) : config?.registrationOpen ? (
             <Link to="/register" className="btn primary">Create a free account</Link>
           ) : (

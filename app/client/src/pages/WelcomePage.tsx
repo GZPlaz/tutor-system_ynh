@@ -46,7 +46,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <ol className="welcome-steps" aria-label="How it works">
           {STEPS.map((s, i) => (
             <li key={s}>
-              <span className="step-num">{i + 1}</span>
+              <span className="step-num">Step {i + 1}</span>
               {s}
             </li>
           ))}

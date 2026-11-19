@@ -46,13 +46,13 @@ export const DEFAULT_BRANDING: Branding = {
   headline: 'One-to-one tutoring that fits your week.',
   intro: 'Book live online sessions with our tutors, keep every worksheet in one place, and see exactly what is coming up next.',
   highlights: ['Live sessions on Google Meet', 'Pick times that suit you', 'All your materials in one place'],
-  primaryColor: '#0E6E6A',
-  accentColor: '#FFD54A',
-  font: 'studio',
-  corners: 'rounded',
+  primaryColor: '#1F3A5F',
+  accentColor: '#B7791F',
+  font: 'classic',
+  corners: 'soft',
   theme: 'auto',
   supportEmail: '',
-  pattern: true,
+  pattern: false,
 };
 
 /** What the public endpoint returns: settings + logo info. */

@@ -9,19 +9,19 @@ import { api } from '../../lib/api';
 import { brandVars, CORNERS, FONTS, inkOn, loadFont, logoUrl, useBranding, type Branding } from '../../lib/branding';
 
 const BRAND_SWATCHES = [
-  { name: 'Study teal', hex: '#0E6E6A' },
-  { name: 'Deep blue', hex: '#1F4AA8' },
-  { name: 'Plum', hex: '#6B3FA0' },
-  { name: 'Forest', hex: '#2F6B3A' },
-  { name: 'Brick', hex: '#A2412E' },
-  { name: 'Slate', hex: '#334155' },
+  { name: 'Navy', hex: '#1F3A5F' },
+  { name: 'Oxford blue', hex: '#24406E' },
+  { name: 'Teal', hex: '#1D5E5B' },
+  { name: 'Forest', hex: '#2F5D3A' },
+  { name: 'Burgundy', hex: '#7A2E3A' },
+  { name: 'Graphite', hex: '#33383F' },
 ];
 const ACCENT_SWATCHES = [
-  { name: 'Highlighter', hex: '#FFD54A' },
-  { name: 'Coral', hex: '#FF8A65' },
-  { name: 'Mint', hex: '#7FE0B6' },
-  { name: 'Sky', hex: '#8EC5FF' },
-  { name: 'Rose', hex: '#F7A8C4' },
+  { name: 'Ochre', hex: '#B7791F' },
+  { name: 'Amber', hex: '#D9A21B' },
+  { name: 'Terracotta', hex: '#C2603D' },
+  { name: 'Sage', hex: '#5E8C61' },
+  { name: 'Steel', hex: '#5B7FA6' },
 ];
 
 type Editable = Omit<Branding, 'logo'>;
