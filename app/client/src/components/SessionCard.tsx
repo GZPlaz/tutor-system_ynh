@@ -5,12 +5,14 @@
  * nobody sees a button the server would refuse.
  */
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { refreshMessageSummary, useMessageSummary } from '../lib/messages';
 import { api } from '../lib/api';
 import { fmtTime } from '../lib/time';
 import type { Session } from '../lib/types';
 import { Icon } from './Icon';
-import { Button, ConfirmDialog, ErrorText, Pill, useAction, useToast, type Tone } from './ui';
+import { Button, ConfirmDialog, ErrorText, Modal, Pill, useAction, useToast, type Tone } from './ui';
 
 function statusFor(s: Session): { tone: Tone; label: string } {
   if (s.isLive) return { tone: 'live', label: 'Live now' };
@@ -53,10 +55,14 @@ export function SessionCard({
   onChange: () => void;
   showActivity?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const toast = useToast();
   const tz = user?.timezone;
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [asking, setAsking] = useState(false);
+  const canMessage = can('messages:send');
+  const summary = useMessageSummary(canMessage && s.myRole === 'student');
+  const openQuestion = summary.openQuestions.find((q) => q.bookingId === s.id);
   const [editingLink, setEditingLink] = useState(false);
   const [link, setLink] = useState(s.meetingUrl ?? '');
   const status = statusFor(s);
@@ -77,6 +83,8 @@ export function SessionCard({
 
   const fullDate = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz }).format(new Date(s.startsAt));
   const finished = ['COMPLETED', 'CANCELLED', 'DECLINED', 'NO_SHOW'].includes(s.status);
+  const upcoming = (s.status === 'PENDING' || s.status === 'CONFIRMED') && new Date(s.endsAt) > new Date();
+  const messageLink = other && canMessage ? `/messages?with=${other.id}&as=${s.myRole === 'student' ? 'tutor' : 'student'}` : null;
 
   return (
     <article className={`session ${s.isLive ? 'is-live' : ''} ${finished ? 'is-finished' : ''} ${s.status === 'PENDING' && s.myRole !== 'student' ? 'needs-me' : ''}`}>
@@ -118,6 +126,8 @@ export function SessionCard({
           {s.myRole === 'student' && s.status === 'PENDING' && <span className="hint-inline">We'll email you when it's confirmed.</span>}
 
           <span className="spacer" />
+          {messageLink && <Link className="link-btn" to={messageLink}>Message {other!.name.split(' ')[0]}</Link>}
+          {canMessage && s.myRole === 'tutor' && upcoming && <button className="link-btn" onClick={() => setAsking(true)}>Ask a question</button>}
           {a.postLink && s.meetingUrl && !editingLink && (
             <button className="link-btn" onClick={() => setEditingLink(true)}>Change link</button>
           )}
@@ -147,6 +157,13 @@ export function SessionCard({
             <small className="hint">Create a meeting in Google Meet, then paste its link. The student is emailed right away.</small>
           </form>
         )}
+        {openQuestion && (
+          <Link className="session-question" to={`/messages?c=${openQuestion.conversationId}`}>
+            <Icon name="help" size={18} />
+            <span><strong>{openQuestion.tutorName} asked you a question</strong> about this session.</span>
+            <span className="session-question-cta">Answer</span>
+          </Link>
+        )}
         <ErrorText>{error || linkError}</ErrorText>
 
         {showActivity && s.posts.length > 1 && (
@@ -163,6 +180,8 @@ export function SessionCard({
           </details>
         )}
       </div>
+
+      {asking && <AskQuestion session={s} onClose={() => setAsking(false)} onDone={() => { setAsking(false); toast(`Question sent — ${s.student.name.split(' ')[0]} was emailed`); }} />}
 
       {dialog === 'decline' && (
         <ConfirmDialog title="Decline this request?" confirmLabel="Decline request" danger reasonLabel="Message for the student (optional)"
@@ -187,5 +206,26 @@ export function SessionCard({
         </ConfirmDialog>
       )}
     </article>
+  );
+}
+
+function AskQuestion({ session, onClose, onDone }: { session: Session; onClose: () => void; onDone: () => void }) {
+  const [body, setBody] = useState('');
+  const [submit, busy, error] = useAction(async () => {
+    await api('/messages/questions', { method: 'POST', json: { bookingId: session.id, body: body.trim() } });
+    void refreshMessageSummary();
+    onDone();
+  });
+  const first = session.student.name.split(' ')[0];
+  return (
+    <Modal title={`Ask ${first} before the session`} onClose={onClose}
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!body.trim()} onClick={() => void submit()}>Send question</Button></>}>
+      <p className="muted">{first} is emailed and sees it highlighted until they answer. The answer arrives in your Messages.</p>
+      <label className="field">
+        <span>Your question</span>
+        <textarea rows={4} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Which topics would you like to focus on? Is there homework you're stuck on?" />
+      </label>
+      <ErrorText>{error}</ErrorText>
+    </Modal>
   );
 }

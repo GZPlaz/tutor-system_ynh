@@ -65,8 +65,10 @@ export async function api<T = unknown>(path: string, init: RequestInit & { json?
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const e = (data as { error?: { code: string; message: string; details?: unknown } }).error;
-    throw new ApiError(res.status, e?.code ?? 'HTTP_ERROR', e?.message ?? res.statusText, e?.details);
+    const e = (data as { error?: { code: string; message: string; details?: unknown; reference?: string } }).error;
+    // Unexpected server errors carry a reference that matches the server log: show it so support can find it.
+    const message = (e?.message ?? res.statusText) + (e?.reference ? ` (Reference: ${e.reference.slice(0, 8)})` : '');
+    throw new ApiError(res.status, e?.code ?? 'HTTP_ERROR', message, e?.details);
   }
   return data as T;
 }

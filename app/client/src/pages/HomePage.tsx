@@ -10,7 +10,8 @@ import { Icon } from '../components/Icon';
 import { Section } from '../components/Shell';
 import { SessionCard } from '../components/SessionCard';
 import { Empty, Loading, useApi, type Paged } from '../components/ui';
-import { fmtDate } from '../lib/time';
+import { fmtDate, fmtTime } from '../lib/time';
+import { useMessageSummary } from '../lib/messages';
 import type { Resource, Session } from '../lib/types';
 
 function greeting(tz?: string) {
@@ -24,6 +25,7 @@ export function HomePage() {
   const pending = useApi<Paged<unknown>>(can('users:approve') ? '/users?status=PENDING&pageSize=1' : null);
   const resources = useApi<Resource[]>(can('resources:read_assigned') ? '/resources?view=assigned' : null);
 
+  const msgs = useMessageSummary(can('messages:send'));
   const items = sessions.data ?? [];
   const requests = items.filter((s) => s.actions.confirm);
   const scheduled = items.filter((s) => !s.actions.confirm);
@@ -37,8 +39,22 @@ export function HomePage() {
         <h1>{greeting(user?.timezone)}, {user?.firstName}.</h1>
       </header>
 
-      {(requests.length > 0 || (pending.data?.total ?? 0) > 0) && (
+      {(requests.length > 0 || (pending.data?.total ?? 0) > 0 || msgs.unread > 0 || msgs.openQuestions.length > 0) && (
         <div className="attention-list">
+          {msgs.openQuestions.map((q) => (
+            <Link key={q.messageId} to={`/messages?c=${q.conversationId}`} className="attention-link">
+              <Icon name="help" />
+              <span><strong>{q.tutorName} asked you a question</strong>{q.service && q.startsAt ? ` before ${q.service} on ${fmtDate(q.startsAt, user?.timezone)} at ${fmtTime(q.startsAt, user?.timezone)}` : ''}</span>
+              <Icon name="chevronRight" />
+            </Link>
+          ))}
+          {msgs.unread > 0 && (
+            <Link to="/messages" className="attention-link">
+              <Icon name="message" />
+              <span><strong>{msgs.unread} unread message{msgs.unread > 1 ? 's' : ''}</strong></span>
+              <Icon name="chevronRight" />
+            </Link>
+          )}
           {requests.length > 0 && (
             <Link to="/sessions" className="attention-link">
               <Icon name="inbox" />

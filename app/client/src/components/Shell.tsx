@@ -9,6 +9,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { logoUrl, useBranding } from '../lib/branding';
 import { api } from '../lib/api';
+import { useMessageSummary } from '../lib/messages';
 import { Icon, type IconName } from './Icon';
 import { Avatar } from './ui';
 import { MaintenanceBanner } from './MaintenanceBanner';
@@ -38,6 +39,7 @@ export function Shell() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ requests: 0, pending: 0 });
+  const messages = useMessageSummary(canAny('messages:send', 'messages:read_any'));
 
   useEffect(() => setOpen(false), [location.pathname]);
   useEffect(() => {
@@ -60,6 +62,7 @@ export function Shell() {
       items: [
         { to: '/', label: 'Home', icon: 'home', show: true, end: true },
         { to: '/sessions', label: 'Sessions', icon: 'calendar', show: can('sessions:view_feed'), badge: counts.requests },
+        { to: '/messages', label: 'Messages', icon: 'message', show: canAny('messages:send', 'messages:read_any'), badge: messages.unread + messages.openQuestions.length },
         { to: '/book', label: 'Book a session', icon: 'calendarPlus', show: can('bookings:create') },
         { to: '/resources', label: 'Resources', icon: 'book', show: canAny('resources:read_assigned', 'resources:create', 'resources:manage_any') },
         { to: '/packets', label: 'Free packets', icon: 'download', show: true },

@@ -8,6 +8,7 @@
  *   → the web app (static files + deep-link fallback) → 404 → central error handler
  */
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import cookieParser from 'cookie-parser';
@@ -28,7 +29,20 @@ export function createApp() {
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url === '/api/health' } }));
+  // Every request gets an id (or keeps a sane one from the proxy). It is logged with the
+  // request, returned as X-Request-Id, and shown to users as the reference on unexpected errors.
+  app.use(
+    pinoHttp({
+      logger,
+      autoLogging: { ignore: (req) => req.url === '/api/health' },
+      genReqId: (req, res) => {
+        const given = req.headers['x-request-id'];
+        const id = typeof given === 'string' && /^[\w-]{8,64}$/.test(given) ? given : randomUUID();
+        res.setHeader('X-Request-Id', id);
+        return id;
+      },
+    }),
+  );
   app.use(securityHeaders);
   app.use(globalLimiter);
 

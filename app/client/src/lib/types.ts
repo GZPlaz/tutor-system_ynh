@@ -205,3 +205,57 @@ export interface Session {
 
 
 export const fullName = (p: { firstName: string; lastName: string } | null | undefined) => (p ? `${p.firstName} ${p.lastName}` : '');
+
+// ---- messaging ---------------------------------------------------------------------
+
+export type Relation = 'tutor' | 'student';
+
+export interface Contact {
+  userId: string;
+  name: string;
+  relation: Relation;
+  subjects: string[];
+}
+
+export interface ConversationSummary {
+  id: string;
+  /** null when staff are viewing someone else's thread */
+  mySide: Relation | null;
+  other: { id: string; name: string; relation: Relation } | null;
+  student: { id: string; name: string };
+  tutor: { id: string; name: string };
+  lastMessage: { preview: string; at: string; fromMe: boolean; kind: 'MESSAGE' | 'QUESTION' } | null;
+  lastMessageAt: string;
+  unread: number;
+  openQuestions: number;
+}
+
+export interface ThreadMessage {
+  id: string;
+  kind: 'MESSAGE' | 'QUESTION';
+  body: string;
+  createdAt: string;
+  answeredAt: string | null;
+  fromMe: boolean;
+  fromSide: Relation;
+  replyTo: { id: string; preview: string } | null;
+  booking: { id: string; startsAt: string; status: BookingStatus; service: string } | null;
+}
+
+export interface Thread {
+  conversation: {
+    id: string;
+    mySide: Relation | null;
+    student: { id: string; name: string };
+    tutor: { id: string; name: string };
+    other: { id: string; name: string; relation: Relation; canReceive: boolean } | null;
+    otherLastReadAt: string | null;
+  };
+  messages: ThreadMessage[];
+  hasMore: boolean;
+}
+
+export interface MessageSummary {
+  unread: number;
+  openQuestions: { messageId: string; conversationId: string; tutorName: string; bookingId: string | null; service: string | null; startsAt: string | null }[];
+}

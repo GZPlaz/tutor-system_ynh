@@ -149,7 +149,8 @@ export function applyBranding(b: Branding) {
   root.dataset.theme = dark ? 'dark' : 'light';
   for (const [k, v] of Object.entries(brandVars(b, dark))) root.style.setProperty(k, v);
   loadFont(b.font);
-  document.title = b.siteName;
+  // Keep a page name set by useDocumentTitle ("Sessions · Site"); only swap the site part.
+  document.title = document.title.includes(' · ') ? `${document.title.split(' · ')[0]} · ${b.siteName}` : b.siteName;
   const href = logoUrl(b);
   let icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (href) {

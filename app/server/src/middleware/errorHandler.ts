@@ -32,10 +32,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     appErr = new AppError(500, 'INTERNAL', 'Something went wrong. Please try again.');
   }
 
-  if (appErr.status >= 500) logger.error({ err }, appErr.message);
+  const reference = appErr.status >= 500 ? String(req.id ?? '') || undefined : undefined;
+  if (appErr.status >= 500) logger.error({ err, reference }, appErr.message);
 
   res.status(appErr.status).json({
-    error: { code: appErr.code, message: appErr.message, details: appErr.details },
+    error: { code: appErr.code, message: appErr.message, details: appErr.details, reference },
   });
 };
 

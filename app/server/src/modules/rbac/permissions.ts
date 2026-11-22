@@ -44,6 +44,10 @@ export const PERMISSIONS = {
   GROUPS_MANAGE: { key: 'groups:manage', category: 'Resources', description: 'Create classes and manage membership' },
   PACKETS_MANAGE: { key: 'packets:manage', category: 'Resources', description: 'Upload, edit and remove the free study packets on the public /packets page' },
 
+  // Messages
+  MESSAGES_SEND: { key: 'messages:send', category: 'Messages', description: 'Message their tutors or students, and answer questions about upcoming sessions' },
+  MESSAGES_READ_ANY: { key: 'messages:read_any', category: 'Messages', description: 'Read every conversation for safeguarding (read-only; every view is logged)' },
+
   // Platform
   AUDIT_READ: { key: 'audit:read', category: 'Platform', description: 'Read the audit log' },
   SETTINGS_MANAGE: { key: 'settings:manage', category: 'Platform', description: "Change site settings (sign-ups, booking rules, maintenance) and branding" },
@@ -84,6 +88,7 @@ export const SYSTEM_ROLES = {
       P.RESOURCES_READ_ASSIGNED,
       P.GROUPS_MANAGE,
       P.USERS_READ,
+      P.MESSAGES_SEND,
     ],
   },
   student: {
@@ -95,6 +100,7 @@ export const SYSTEM_ROLES = {
       P.BOOKINGS_CANCEL_OWN,
       P.SESSIONS_VIEW_FEED,
       P.RESOURCES_READ_ASSIGNED,
+      P.MESSAGES_SEND,
     ],
   },
 } as const satisfies Record<string, { name: string; description: string; permissions: readonly PermissionKey[] }>;

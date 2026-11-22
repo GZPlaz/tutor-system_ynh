@@ -70,6 +70,13 @@ enum ResourceType {
   VIDEO // external video URL (YouTube, Drive, Vimeo, ...)
 }
 
+/// MESSAGE = ordinary chat; QUESTION = a tutor's question about an upcoming session,
+/// highlighted for the student until they answer it.
+enum MessageKind {
+  MESSAGE
+  QUESTION
+}
+
 enum FeedPostKind {
   MEETING_LINK
   NOTE
@@ -162,6 +169,10 @@ model User {
   resourceAssignments ResourceAssignment[] @relation("AssignmentStudent")
   assignmentsMade     ResourceAssignment[] @relation("AssignmentAssigner")
   packetsUploaded     StudyPacket[]
+
+  conversationsAsStudent Conversation[] @relation("ConversationStudent")
+  conversationsAsTutor   Conversation[] @relation("ConversationTutor")
+  messagesSent           Message[]
 
   subscriptions  Subscription[]
   payments       Payment[]
@@ -412,6 +423,7 @@ model Booking {
   payments      Payment[]
   subscription  Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   creditEntries SessionCredit[]
+  messages      Message[]
 
   @@index([tutorId, startsAt])
   @@index([studentId, startsAt])
@@ -515,6 +527,59 @@ model ResourceAssignment {
   @@index([studentId])
   @@index([groupId])
   @@map("resource_assignments")
+}
+
+// -----------------------------------------------------------------------------
+// Messaging: one private thread per student–tutor pair
+// -----------------------------------------------------------------------------
+
+/// Read and email state is stored per side, so unread counts and "one email per
+/// unread streak" need no extra table.
+model Conversation {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId         String    @map("student_id") @db.Uuid
+  tutorId           String    @map("tutor_id") @db.Uuid
+  lastMessageAt     DateTime  @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  studentLastReadAt DateTime? @map("student_last_read_at") @db.Timestamptz(3)
+  tutorLastReadAt   DateTime? @map("tutor_last_read_at") @db.Timestamptz(3)
+  /// When each side was last emailed about this thread (throttles notifications).
+  studentNotifiedAt DateTime? @map("student_notified_at") @db.Timestamptz(3)
+  tutorNotifiedAt   DateTime? @map("tutor_notified_at") @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  student  User      @relation("ConversationStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  tutor    User      @relation("ConversationTutor", fields: [tutorId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([studentId, tutorId])
+  @@index([tutorId, lastMessageAt])
+  @@index([studentId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  senderId       String      @map("sender_id") @db.Uuid
+  kind           MessageKind @default(MESSAGE)
+  body           String
+  /// The session a question (or an answer to it) is about.
+  bookingId      String?     @map("booking_id") @db.Uuid
+  /// Set on an answer: the question it answers.
+  replyToId      String?     @map("reply_to_id") @db.Uuid
+  /// Set on a QUESTION once the student answers it.
+  answeredAt     DateTime?   @map("answered_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  booking      Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  replyTo      Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("MessageReply")
+
+  @@index([conversationId, createdAt])
+  @@index([bookingId])
+  @@map("messages")
 }
 
 // -----------------------------------------------------------------------------

@@ -38,6 +38,10 @@ const PATHS = {
   download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
   sparkle: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18',
   inbox: 'M4 13h4l1.5 3h5L16 13h4M4 13l2.5-8h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z',
+  message: 'M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z',
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
+  send: 'M4 12 20 4l-6 16-3-7z',
+  arrowLeft: 'M19 12H5M11 6l-6 6 6 6',
 } as const;
 
 export type IconName = keyof typeof PATHS;

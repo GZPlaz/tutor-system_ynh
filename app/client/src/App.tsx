@@ -3,7 +3,8 @@
  * so custom roles get exactly the screens they need. Old URLs redirect.
  */
 import type { ReactElement } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { BookShell, RequireAuth, RequirePermission } from './auth/guards';
 import { Shell } from './components/Shell';
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from './pages/WelcomePage';
@@ -23,12 +24,15 @@ import { BrandingPage } from './pages/admin/BrandingPage';
 import { ActivityPage } from './pages/admin/ActivityPage';
 import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
 import { PacketsPage } from './pages/PacketsPage';
+import { MessagesPage } from './pages/MessagesPage';
 import { Empty } from './components/ui';
 
 const gate = (any: string[], element: ReactElement) => <Route element={<RequirePermission any={any} />}>{element}</Route>;
 
 export default function App() {
+  const location = useLocation();
   return (
+    <ErrorBoundary resetKey={location.pathname}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -48,6 +52,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           {gate(['sessions:view_feed'], <Route path="/sessions" element={<SessionsPage />} />)}
+          {gate(['messages:send', 'messages:read_any'], <Route path="/messages" element={<MessagesPage />} />)}
           {gate(['availability:manage_own', 'availability:manage_any'], <Route path="/availability" element={<AvailabilityPage />} />)}
           {gate(['resources:read_assigned', 'resources:create', 'resources:manage_any'], <Route path="/resources" element={<ResourcesPage />} />)}
           {gate(['groups:manage'], <Route path="/classes" element={<ClassesPage />} />)}
@@ -72,5 +77,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </ErrorBoundary>
   );
 }

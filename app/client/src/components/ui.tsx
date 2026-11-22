@@ -4,6 +4,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { api, ApiError } from '../lib/api';
+import { useBranding } from '../lib/branding';
 import { Icon, type IconName } from './Icon';
 
 // ---- data hooks -------------------------------------------------------------------
@@ -124,7 +125,18 @@ export function Button({
   );
 }
 
+/** Sets the browser tab title for the page: "Sessions · MindAccel Tutoring". */
+export function useDocumentTitle(title: string | null | undefined) {
+  const { branding } = useBranding();
+  useEffect(() => {
+    if (!title) return;
+    document.title = `${title} · ${branding.siteName}`;
+    return () => { document.title = branding.siteName; };
+  }, [title, branding.siteName]);
+}
+
 export function PageHeader({ title, description, action }: { title: string; description?: ReactNode; action?: ReactNode }) {
+  useDocumentTitle(title);
   return (
     <header className="page-header">
       <div>

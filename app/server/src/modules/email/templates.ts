@@ -199,6 +199,25 @@ export const templates = {
     text: `Reminder: ${d.serviceName} with ${d.otherPartyName} ${d.leadLabel} (${d.when}). ${sessionsUrl(d)}`,
   }),
 
+  message_received: (d, b) => ({
+    subject: `New message from ${d.fromName}`,
+    html: layout(b, `${d.fromName} sent you a message`,
+      `<blockquote style="margin:6px 0 18px;padding:12px 16px;border-left:3px solid #C3CCC7;background:#F6F7F4;color:#15242B;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(d.preview)}</blockquote>` +
+      p('Reply on the site. We only email you once until you have read your new messages.'),
+      { label: 'Read and reply', url: link(`/messages?c=${encodeURIComponent(String(d.conversationId))}`) }),
+    text: `${d.fromName} sent you a message:\n\n${d.preview}\n\nRead and reply: ${link(`/messages?c=${encodeURIComponent(String(d.conversationId))}`)}`,
+  }),
+
+  session_question: (d, b) => ({
+    subject: `${d.tutorName} has a question before your session`,
+    html: layout(b, 'Your tutor has a question',
+      detail(d.serviceName, d.when, `<div style="font-size:14px;margin-top:6px">with ${esc(d.tutorName)}</div>`) +
+      `<blockquote style="margin:0 0 18px;padding:12px 16px;border-left:3px solid #C3CCC7;background:#F6F7F4;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(d.question)}</blockquote>` +
+      p('Answering before the session helps your tutor prepare.'),
+      { label: 'Answer the question', url: link(`/messages?c=${encodeURIComponent(String(d.conversationId))}`) }),
+    text: `${d.tutorName} has a question before your ${d.serviceName} session (${d.when}):\n\n${d.question}\n\nAnswer it: ${link(`/messages?c=${encodeURIComponent(String(d.conversationId))}`)}`,
+  }),
+
   meeting_link_posted: (d, b) => ({
     subject: `Your Meet link for ${d.serviceName}`,
     html: layout(b, 'Your Google Meet link is ready',

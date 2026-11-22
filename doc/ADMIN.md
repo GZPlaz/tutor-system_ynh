@@ -21,6 +21,25 @@ No restart needed; changes apply within seconds.
 
 Branding, people, roles and services have their own pages in the Admin menu. There are no payment features: every session is free.
 
+### Messages
+
+Students and tutors have private conversations under **Messages** in the menu.
+
+- **Who can message whom:** a student can message any tutor who teaches an active service, or who they have booked. A tutor can message students who have booked them. People who booked without an account can't sign in, so they can't be messaged.
+- **Questions before a session:** on an upcoming session, a tutor can click **Ask a question**. The student is emailed, and the question is highlighted on their home page, on the session and in the conversation until they answer it.
+- **Emails:** people get one email when a new message arrives, then no more about that conversation until they've read it. Questions always send an email.
+- **Safeguarding:** administrators (permission `messages:read_any`) can open **Messages → All conversations** to read any conversation. It is read-only, and every conversation opened is recorded in the activity log. The start of every conversation tells users that administrators can review conversations.
+- **Limits:** messages are up to 4,000 characters, and each person can send up to 40 messages per 5 minutes.
+- **Permissions:** students and tutors get `messages:send` automatically, including on existing sites when you upgrade. Remove it from a role in Admin → Roles to turn messaging off for that role.
+
+### Support references
+
+If something unexpected goes wrong, the error message shows a short reference, like `(Reference: a8703517)`. Search the log for it to find the exact request:
+
+```
+sudo grep a8703517 /var/log/mindaccel/mindaccel.log
+```
+
 ### Free study packets (`/packets`)
 
 Anyone can open `/packets` and download the free practice packets without an account; the page is linked from the sign-in page and the menu. Manage them in **Admin → Study packets**:
