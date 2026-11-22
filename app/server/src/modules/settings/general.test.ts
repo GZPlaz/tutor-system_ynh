@@ -59,3 +59,16 @@ test('email domain allow-list', () => {
   assert.equal(emailDomainAllowed('a@sub.school.org', ['school.org']), false, 'subdomains must be listed explicitly');
   assert.equal(emailDomainAllowed('a@school.org.evil.com', ['school.org']), false);
 });
+
+test('legal details default to blanks and version 1, and a bad email is refused', () => {
+  const d = defaultSettings();
+  assert.equal(d.legal.termsVersion, '1');
+  assert.equal(d.legal.minimumAge, 13);
+  assert.equal(d.legal.parentalConsentAge, 18);
+  assert.ok(!SettingsPatchSchema.safeParse({ legal: { contactEmail: 'nope' } }).success);
+  assert.ok(SettingsPatchSchema.safeParse({ legal: { contactEmail: '' } }).success);
+  const s = applyPatch(d, { legal: { operatorName: 'Acme LLC' } });
+  assert.equal(s.legal.operatorName, 'Acme LLC');
+  assert.equal(s.legal.termsVersion, '1');
+  assert.deepEqual(resolveSettings({ legal: { minimumAge: 'old' } }).legal, d.legal);
+});

@@ -6,6 +6,7 @@
  *   2. Database guarantee — exclusion constraints on `bookings` (see the SQL
  *      migration) reject any overlapping insert, even under a race.
  */
+import { consentRecord, type AgeConfirmation } from '../legal/consent.js';
 import type { BookingStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { AppError, BadRequest, Conflict, Forbidden, NotFound } from '../../lib/errors.js';
@@ -335,6 +336,7 @@ export async function createGuestBooking(input: {
   lastName: string;
   email: string;
   timezone: string;
+  age: AgeConfirmation;
 }) {
   assertGuestBookingOpen();
 
@@ -358,7 +360,7 @@ export async function createGuestBooking(input: {
   let booking: BookingWithPeople;
   try {
     booking = await prisma.$transaction(async (tx) => {
-      const person = { firstName: input.firstName, lastName: input.lastName, timezone: input.timezone };
+      const person = { firstName: input.firstName, lastName: input.lastName, timezone: input.timezone, ...consentRecord(input.age) };
       const guest = existing
         ? await tx.user.update({ where: { id: existing.id }, data: person })
         : await tx.user.create({ data: { email: input.email, ...person, status: 'ACTIVE', isGuest: true } });

@@ -170,6 +170,14 @@ model User {
   emailReminders   Boolean    @default(true) @map("email_reminders")
   /// Secret part of the personal calendar feed URL; reset it to invalidate old links.
   calendarKey      String?    @map("calendar_key")
+  /// When and which version of the Terms & Privacy Policy the person last accepted.
+  /// A version that differs from Settings → Legal asks them to accept again.
+  termsAcceptedAt  DateTime?  @map("terms_accepted_at") @db.Timestamptz(3)
+  termsVersion     String?    @map("terms_version")
+  /// The person confirmed a parent or guardian agreed on their behalf (under-age sign-ups).
+  guardianConsent  Boolean    @default(false) @map("guardian_consent")
+  /// Set when the person asks (Profile → Your data) for their account to be deleted.
+  deletionRequestedAt DateTime? @map("deletion_requested_at") @db.Timestamptz(3)
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 

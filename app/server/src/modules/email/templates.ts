@@ -60,7 +60,10 @@ function layout(brand: EmailBrand, title: string, body: string, cta?: { label: s
 <h1 style="margin:0 0 14px;font-size:21px;line-height:1.3">${esc(title)}</h1>
 ${body}
 ${button}
-<p style="margin:28px 0 0;font-size:12px;color:#5A6A71">You're receiving this because you booked or have an account with ${esc(brand.siteName)}.</p>
+<p style="margin:28px 0 0;font-size:12px;line-height:1.6;color:#5A6A71">You're receiving this because you booked or have an account with ${esc(brand.siteName)}.
+<a href="${esc(link('/legal/privacy'))}" style="color:#5A6A71">Privacy Policy</a> ·
+<a href="${esc(link('/legal/terms'))}" style="color:#5A6A71">Terms</a> ·
+<a href="${esc(link('/profile'))}" style="color:#5A6A71">Email preferences</a></p>
 </td></tr></table></td></tr></table></body></html>`;
 }
 
@@ -244,6 +247,25 @@ export const templates = {
       p(`<span style="color:#5A6A71;font-size:13px">Sent by ${esc(d.senderName)} from ${esc(b.siteName)}.</span>`),
       { label: 'Open the site', url: link('/') }),
     text: `${d.body}\n\n— ${d.senderName}, ${b.siteName}`,
+  }),
+
+  admin_deletion_request: (d, b) => ({
+    subject: `Account deletion requested: ${d.userName}`,
+    html: layout(b, 'Someone asked for their account to be deleted',
+      p(`<strong>${esc(d.userName)}</strong> (${esc(d.userEmail)}) asked for their account and personal data to be deleted.`) +
+      (d.reason ? `<blockquote style="margin:6px 0 18px;padding:12px 16px;border-left:3px solid #C3CCC7;background:#F6F7F4;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(d.reason)}</blockquote>` : '') +
+      p('Privacy laws usually require you to act within one month. Open their profile, check nothing must be kept (for example unpaid bookings or an open safety report), then use Delete account.'),
+      { label: 'Open their profile', url: link(`/admin/people/${String(d.userId)}`) }),
+    text: `${d.userName} (${d.userEmail}) asked for their account to be deleted.${d.reason ? `\n\nReason: ${d.reason}` : ''}\n\nOpen: ${link(`/admin/people/${String(d.userId)}`)}`,
+  }),
+
+  deletion_request_received: (d, b) => ({
+    subject: `We received your request to delete your ${b.siteName} account`,
+    html: layout(b, 'We received your deletion request',
+      p(`Hi ${esc(d.firstName)}, we have received your request to delete your account and personal data.`) +
+      p('An administrator will process it, normally within 30 days, and may contact you if anything needs to be settled first (such as upcoming sessions). You can cancel the request from your profile until then.'),
+      { label: 'Open your profile', url: link('/profile') }),
+    text: `We received your request to delete your ${b.siteName} account. An administrator will process it, normally within 30 days. You can cancel it from your profile: ${link('/profile')}`,
   }),
 
   password_set_by_admin: (d, b) => ({

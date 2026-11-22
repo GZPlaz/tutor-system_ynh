@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Section } from '../components/Shell';
-import { Button, ErrorText, PageHeader, useAction, useToast } from '../components/ui';
-import { api, setAccessToken } from '../lib/api';
+import { Button, ConfirmDialog, ErrorText, PageHeader, useAction, useToast } from '../components/ui';
+import { api, downloadFile, setAccessToken } from '../lib/api';
+import { fmtDate } from '../lib/time';
 import { allTimeZones, browserTimeZone } from '../lib/time';
 
 export function ProfilePage() {
@@ -117,6 +118,8 @@ export function ProfilePage() {
         </div>
       </Section>
 
+      <YourData />
+
       <Section title="Getting around">
         <div className="panel row-between">
           <p className="muted">See the short tour of where everything is again.</p>
@@ -124,6 +127,70 @@ export function ProfilePage() {
         </div>
       </Section>
     </div>
+  );
+}
+
+/** Privacy rights: a copy of everything we hold, and asking for the account to be deleted. */
+function YourData() {
+  const { user, reload } = useAuth();
+  const toast = useToast();
+  const [asking, setAsking] = useState(false);
+  const requested = user?.legal.deletionRequestedAt ?? null;
+  const [download, downloading, downloadErr] = useAction(async () => {
+    await downloadFile('/legal/export', `my-data-${new Date().toISOString().slice(0, 10)}.json`);
+  });
+  const [cancelRequest, cancelling, cancelErr] = useAction(async () => {
+    await api('/legal/deletion-request', { method: 'DELETE' });
+    await reload();
+    toast('Deletion request withdrawn');
+  });
+  return (
+    <Section title="Your data">
+      <div className="data-rights">
+      <div className="panel row-between">
+        <p className="muted">
+          Download a copy of your profile, bookings, messages and other information we hold about you.{' '}
+          <a href="/legal/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+        </p>
+        <Button variant="secondary" busy={downloading} onClick={() => void download()}>Download my data</Button>
+      </div>
+      <ErrorText>{downloadErr}</ErrorText>
+      <div className="panel row-between">
+        {requested ? (
+          <>
+            <p><strong>Deletion requested</strong> on {fmtDate(requested, user?.timezone ?? 'UTC')}. An administrator will process it, normally within 30 days.</p>
+            <Button variant="secondary" busy={cancelling} onClick={() => void cancelRequest()}>Withdraw request</Button>
+          </>
+        ) : (
+          <>
+            <p className="muted">Ask us to delete your account and personal information. An administrator processes it and confirms by email.</p>
+            <Button variant="danger" onClick={() => setAsking(true)}>Request account deletion</Button>
+          </>
+        )}
+      </div>
+      </div>
+      <ErrorText>{cancelErr}</ErrorText>
+      {asking && (
+        <ConfirmDialog
+          title="Delete your account?"
+          confirmLabel="Send deletion request"
+          danger
+          reasonLabel="Anything you'd like to tell us? (optional)"
+          onClose={() => setAsking(false)}
+          onConfirm={async (reason) => {
+            await api('/legal/deletion-request', { method: 'POST', json: { reason } });
+            await reload();
+            toast('Request sent. We have emailed you a confirmation.');
+          }}
+        >
+          <p>
+            Your name, email and other personal details will be removed and you will no longer be able to sign in. Upcoming
+            sessions will be cancelled. A minimal record of past sessions may be kept where the law requires.
+          </p>
+          <p className="muted">Consider downloading your data first. You can withdraw the request until it is processed.</p>
+        </ConfirmDialog>
+      )}
+    </Section>
   );
 }
 

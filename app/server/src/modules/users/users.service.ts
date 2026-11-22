@@ -152,6 +152,7 @@ export async function userOverview(viewer: Express.AuthContext, id: string) {
       ...userSelect,
       isGuest: true, failedLoginCount: true, lockedUntil: true, tourCompletedAt: true,
       emailOnMessage: true, emailReminders: true, rejectionReason: true,
+      termsVersion: true, termsAcceptedAt: true, guardianConsent: true, deletionRequestedAt: true,
       approvedBy: { select: { firstName: true, lastName: true } },
     },
   });
@@ -184,7 +185,9 @@ export async function userOverview(viewer: Express.AuthContext, id: string) {
   return {
     user: { ...present(rest as UserRow), isGuest: u.isGuest, failedLoginCount: u.failedLoginCount, lockedUntil: u.lockedUntil && u.lockedUntil > now ? u.lockedUntil : null,
       tourCompletedAt: u.tourCompletedAt, preferences: { emailOnMessage: u.emailOnMessage, emailReminders: u.emailReminders },
-      rejectionReason: u.rejectionReason, approvedBy: approvedBy ? `${approvedBy.firstName} ${approvedBy.lastName}` : null },
+      rejectionReason: u.rejectionReason,
+      legal: { termsVersion: u.termsVersion, termsAcceptedAt: u.termsAcceptedAt, guardianConsent: u.guardianConsent, deletionRequestedAt: u.deletionRequestedAt },
+      approvedBy: approvedBy ? `${approvedBy.firstName} ${approvedBy.lastName}` : null },
     sessions: { asStudent: tally(asStudent), asTutor: tally(asTutor) },
     upcoming: upcoming.map((b) => ({ id: b.id, startsAt: b.startsAt, status: b.status, service: b.service.name, role: b.studentId === id ? 'student' : 'tutor',
       with: b.studentId === id ? `${b.tutor.firstName} ${b.tutor.lastName}` : `${b.student.firstName} ${b.student.lastName}` })),

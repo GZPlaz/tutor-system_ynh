@@ -221,7 +221,7 @@ export function Segmented<T extends string>({
   );
 }
 
-export function Modal({ title, onClose, children, wide, footer }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; footer?: ReactNode }) {
+export function Modal({ title, onClose, children, wide, footer, dismissible = true }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; footer?: ReactNode; dismissible?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -235,9 +235,11 @@ export function Modal({ title, onClose, children, wide, footer }: { title: strin
       <div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <header className="modal-header">
           <h2>{title}</h2>
-          <button className="icon-btn modal-close" onClick={onClose} aria-label="Close">
-            <Icon name="x" />
-          </button>
+          {dismissible && (
+            <button className="icon-btn modal-close" onClick={onClose} aria-label="Close">
+              <Icon name="x" />
+            </button>
+          )}
         </header>
         <div className="modal-body">{children}</div>
         {footer && <footer className="modal-footer">{footer}</footer>}

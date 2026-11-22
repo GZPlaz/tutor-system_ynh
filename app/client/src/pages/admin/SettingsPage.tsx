@@ -3,6 +3,7 @@
  *   • sign-ups: open or invitation-only, approval, allowed email domains
  *   • booking: account needed or not, and the scheduling rules
  *   • maintenance mode
+ *   • legal: who runs the site (shown on the legal pages) and the terms version
  * Everything saves together with "Save changes" and takes effect within seconds.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -50,12 +51,19 @@ export function SettingsPage() {
     }
   }, [savedJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loaded = !!draft;
+  useEffect(() => {
+    if (loaded && window.location.hash === '#legal') document.getElementById('legal')?.scrollIntoView({ block: 'start' });
+  }, [loaded]);
+
   const current = useMemo(
     () => (draft ? { ...draft, registration: { ...draft.registration, allowedEmailDomains: parseDomains(domainText) } } : null),
     [draft, domainText],
   );
   const dirty = !!current && JSON.stringify(current) !== savedJson;
-  const numbersOk = !!current && Object.values(current.booking).every((v) => typeof v !== 'number' || Number.isFinite(v));
+  const numbersOk = !!current && [...Object.values(current.booking), current.legal.minimumAge, current.legal.parentalConsentAge]
+    .every((v) => typeof v !== 'number' || Number.isFinite(v));
+  const termsBumped = !!remote.data && !!current && current.legal.termsVersion !== remote.data.legal.termsVersion;
 
   const [save, saving, saveError] = useAction(async () => {
     if (!current) return;
@@ -77,10 +85,16 @@ export function SettingsPage() {
   const setReg = (p: Partial<AppSettings['registration']>) => setDraft({ ...draft, registration: { ...draft.registration, ...p } });
   const setBook = (p: Partial<AppSettings['booking']>) => setDraft({ ...draft, booking: { ...draft.booking, ...p } });
   const setMaint = (p: Partial<AppSettings['maintenance']>) => setDraft({ ...draft, maintenance: { ...draft.maintenance, ...p } });
+  const setLegal = (p: Partial<AppSettings['legal']>) => setDraft({ ...draft, legal: { ...draft.legal, ...p } });
+  const publishNewTerms = () => {
+    const v = remote.data?.legal.termsVersion ?? draft.legal.termsVersion;
+    const next = /^\d+$/.test(v) ? String(Number(v) + 1) : `${v}.1`;
+    setLegal({ termsVersion: next, effectiveDate: new Date().toISOString().slice(0, 10) });
+  };
 
   return (
     <div className="page">
-      <PageHeader title="Settings" description="Who can join, how people book, and a maintenance switch. Changes apply within seconds — no restart needed." />
+      <PageHeader title="Settings" description="Who can join, how people book, maintenance, and your legal details. Changes apply within seconds — no restart needed." />
       <div className="settings-form">
         <section className="panel">
           <h2 className="panel-title">New accounts</h2>
@@ -146,6 +160,50 @@ export function SettingsPage() {
             <span>Message shown to visitors</span>
             <input value={draft.maintenance.message} maxLength={300} onChange={(e) => setMaint({ message: e.target.value })} />
           </label>
+        </section>
+
+        <section className="panel" id="legal">
+          <h2 className="panel-title">Legal</h2>
+          <p className="muted">
+            Filled into the <a href="/legal/terms" target="_blank" rel="noopener">Terms</a>,{' '}
+            <a href="/legal/privacy" target="_blank" rel="noopener">Privacy Policy</a> and the other legal pages linked in every footer.
+            The pages are a careful general template, not legal advice: have a lawyer in your state or country review them.
+          </p>
+          <div className="form-row">
+            <label className="field">
+              <span>Legal name of the business</span>
+              <input value={draft.legal.operatorName} maxLength={160} placeholder="e.g. MindAccel Tutoring LLC" onChange={(e) => setLegal({ operatorName: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Privacy and legal contact email</span>
+              <input type="email" value={draft.legal.contactEmail} maxLength={200} placeholder="privacy@yourdomain.com" onChange={(e) => setLegal({ contactEmail: e.target.value })} />
+            </label>
+          </div>
+          <label className="field">
+            <span>Postal address</span>
+            <textarea rows={2} value={draft.legal.postalAddress} maxLength={400} onChange={(e) => setLegal({ postalAddress: e.target.value })} />
+            <small className="hint">Many privacy laws require a postal address for requests. One line per row.</small>
+          </label>
+          <label className="field">
+            <span>Governing law</span>
+            <input value={draft.legal.governingLaw} maxLength={120} placeholder="e.g. the State of Texas, United States" onChange={(e) => setLegal({ governingLaw: e.target.value })} />
+          </label>
+          <div className="form-row">
+            <NumberField label="Minimum age (with a parent's account)" hint="Younger students can only join through a parent or guardian." value={draft.legal.minimumAge} min={0} max={21} onChange={(minimumAge) => setLegal({ minimumAge })} />
+            <NumberField label="Age to agree without a parent" hint="Under this age a parent or guardian must agree. Usually 18." value={draft.legal.parentalConsentAge} min={0} max={21} onChange={(parentalConsentAge) => setLegal({ parentalConsentAge })} />
+          </div>
+          <label className="field">
+            <span>Additional terms (optional)</span>
+            <textarea rows={4} value={draft.legal.additionalTerms} maxLength={5000} placeholder="Prices, refund rules, anything your lawyer asks you to add…" onChange={(e) => setLegal({ additionalTerms: e.target.value })} />
+            <small className="hint">Added as a final section of the Terms. Leave a blank line between paragraphs.</small>
+          </label>
+          <div className="row-between legal-version">
+            <span>
+              Terms version <strong>{draft.legal.termsVersion}</strong>, effective {draft.legal.effectiveDate}.
+              {termsBumped && <span className="field-error"> When you save, everyone will be asked to accept the updated terms at their next visit.</span>}
+            </span>
+            <Button variant="secondary" disabled={termsBumped} onClick={publishNewTerms}>Publish updated terms</Button>
+          </div>
         </section>
 
         <ErrorText>{saveError}</ErrorText>

@@ -18,6 +18,7 @@ interface Overview {
     isGuest: boolean; failedLoginCount: number; lockedUntil: string | null; tourCompletedAt: string | null;
     preferences: { emailOnMessage: boolean; emailReminders: boolean }; rejectionReason: string | null; approvedBy: string | null;
     approvedAt: string | null; lastLoginAt: string | null; createdAt: string;
+    legal: { termsVersion: string | null; termsAcceptedAt: string | null; guardianConsent: boolean; deletionRequestedAt: string | null };
   };
   sessions: { asStudent: Record<string, number>; asTutor: Record<string, number> };
   upcoming: { id: string; startsAt: string; status: string; service: string; role: 'student' | 'tutor'; with: string }[];
@@ -79,6 +80,12 @@ export function PersonPage() {
           {can('users:manage') && <Button variant="secondary" busy={busy} onClick={() => void act('unlock', `${first} can sign in again`)}>Unlock now</Button>}
         </div>
       )}
+      {u.legal.deletionRequestedAt && (
+        <div className="notice warn">
+          <strong>{first} asked for their account to be deleted</strong> on {fmtDate(u.legal.deletionRequestedAt, tz)}. Privacy laws
+          usually expect this within one month. Check nothing needs to be kept, then use Delete account.
+        </div>
+      )}
       <ErrorText>{actError}</ErrorText>
 
       <div className="person-grid">
@@ -93,6 +100,7 @@ export function PersonPage() {
               {u.rejectionReason && <div><dt>Declined because</dt><dd>{u.rejectionReason}</dd></div>}
               <div><dt>Emails</dt><dd>Messages {u.preferences.emailOnMessage ? 'on' : 'off'} · Reminders {u.preferences.emailReminders ? 'on' : 'off'}</dd></div>
               <div><dt>Welcome tour</dt><dd>{u.tourCompletedAt ? `Seen ${fmtDate(u.tourCompletedAt, tz)}` : 'Not seen yet'}</dd></div>
+              <div><dt>Terms accepted</dt><dd>{u.legal.termsAcceptedAt ? `Version ${u.legal.termsVersion}, ${fmtDate(u.legal.termsAcceptedAt, tz)}${u.legal.guardianConsent ? ' (by a parent or guardian)' : ''}` : 'Not yet'}</dd></div>
               <div><dt>Failed sign-ins</dt><dd>{u.failedLoginCount}</dd></div>
             </dl>
           </section>

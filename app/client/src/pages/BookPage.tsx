@@ -8,6 +8,7 @@
  * and get a private link by email.
 
  */
+import { ConsentControls, NO_CONSENT, consentBody, consentComplete, type Consent } from '../lib/legal';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -45,6 +46,7 @@ export function BookPage() {
   const [studentSearch, setStudentSearch] = useState('');
   const studentResults = useApi<Paged<UserRow>>(staff && studentSearch.trim().length >= 2 ? `/users?${new URLSearchParams({ status: 'ACTIVE', search: studentSearch.trim(), pageSize: '8' })}` : null);
   const [who, setWho] = useState({ firstName: '', lastName: '', email: '', website: '' });
+  const [consent, setConsent] = useState<Consent>(NO_CONSENT);
 
   const range = useMemo(() => {
     const from = new Date(Date.now() + period * DAYS * 86_400_000);
@@ -100,6 +102,7 @@ export function BookPage() {
             lastName: who.lastName.trim(),
             email: who.email.trim(),
             website: who.website,
+            ...consentBody(consent),
           },
         });
         setSent(true);
@@ -118,7 +121,7 @@ export function BookPage() {
 
   const fmtDay = (d: Date, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(undefined, { ...o, timeZone: tz }).format(d);
 
-  const guestIncomplete = guest && (!who.firstName.trim() || !who.lastName.trim() || !/^\S+@\S+\.\S+$/.test(who.email.trim()));
+  const guestIncomplete = guest && (!who.firstName.trim() || !who.lastName.trim() || !/^\S+@\S+\.\S+$/.test(who.email.trim()) || !consentComplete(consent));
 
   if (sent && pick && service) {
     return (
@@ -321,6 +324,7 @@ export function BookPage() {
             <span>Anything your tutor should know? (optional)</span>
             <textarea rows={3} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Topics you want to cover, homework you're stuck on…" />
           </label>
+          {guest && <ConsentControls value={consent} onChange={setConsent} action="booking" />}
           <p className="muted">
             Your tutor confirms each request. We'll email you as soon as they do.
             {config.data ? ` You can cancel up to ${config.data.studentCancelCutoffHours} hours before.` : ''}

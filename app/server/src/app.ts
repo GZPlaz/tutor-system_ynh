@@ -72,6 +72,7 @@ export function createApp() {
       allowedEmailDomains: s.registration.allowedEmailDomains,
       guestBooking: !s.booking.requireAccount,
       maintenance: s.maintenance.enabled ? { message: s.maintenance.message } : null,
+      legal: s.legal,
     });
   });
 

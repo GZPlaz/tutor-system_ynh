@@ -7,6 +7,7 @@
  *   booking       is an account needed to book, plus the scheduling rules that used
  *                 to live only in .env (lead time, horizon, step, cancel cutoff…)
  *   maintenance   lock everyone but administrators out while you work on the site
+ *   legal         operator details for the legal pages, and the terms version
  *
  * Stored as one JSON document in app_settings (key "general") and merged over
  * defaults, so a new setting added later never breaks saved data. The defaults
@@ -52,10 +53,31 @@ export const MaintenanceSchema = z.object({
   message: z.string().trim().max(300),
 });
 
+/**
+ * Who runs the site, used to fill in the Terms, Privacy Policy and other legal
+ * pages. `termsVersion` is recorded against each person when they accept; changing
+ * it asks everyone to read and accept the updated terms at their next visit.
+ */
+export const LegalSchema = z.object({
+  operatorName: z.string().trim().max(160),
+  contactEmail: z.union([z.literal(''), z.string().trim().email().max(200)]),
+  postalAddress: z.string().trim().max(400),
+  governingLaw: z.string().trim().max(120),
+  /** Youngest age allowed to use the service at all (with a parent's consent if under 18). */
+  minimumAge: z.number().int().min(0).max(21),
+  /** Under this age, a parent or guardian must agree on the person's behalf. */
+  parentalConsentAge: z.number().int().min(0).max(21),
+  effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD'),
+  termsVersion: z.string().trim().min(1).max(40),
+  /** Optional extra paragraph shown at the end of the Terms (refund rules, local requirements…). */
+  additionalTerms: z.string().trim().max(5000),
+});
+
 export const SettingsSchema = z.object({
   registration: RegistrationSchema,
   booking: BookingSchema,
   maintenance: MaintenanceSchema,
+  legal: LegalSchema,
 });
 
 export const SettingsPatchSchema = z
@@ -63,6 +85,7 @@ export const SettingsPatchSchema = z
     registration: RegistrationSchema.partial(),
     booking: BookingSchema.partial(),
     maintenance: MaintenanceSchema.partial(),
+    legal: LegalSchema.partial(),
   })
   .partial();
 
@@ -81,11 +104,27 @@ export function defaultSettings(): Settings {
       meetingLinkNudgeMinutes: env.MEETING_LINK_NUDGE_MIN,
     },
     maintenance: { enabled: false, message: 'We are making improvements and will be back shortly.' },
+    legal: {
+      operatorName: '',
+      contactEmail: '',
+      postalAddress: '',
+      governingLaw: '',
+      minimumAge: 13,
+      parentalConsentAge: 18,
+      effectiveDate: '2026-11-22',
+      termsVersion: '1',
+      additionalTerms: '',
+    },
   };
 }
 
 type Sections = keyof Settings;
-const SECTION_SCHEMAS = { registration: RegistrationSchema, booking: BookingSchema, maintenance: MaintenanceSchema } as const;
+const SECTION_SCHEMAS = {
+  registration: RegistrationSchema,
+  booking: BookingSchema,
+  maintenance: MaintenanceSchema,
+  legal: LegalSchema,
+} as const;
 
 /**
  * Defaults ← saved values. Each section is validated on its own: if one saved
@@ -110,6 +149,7 @@ export function applyPatch(current: Settings, patch: SettingsPatch): Settings {
     registration: { ...current.registration, ...(patch.registration ?? {}) },
     booking: { ...current.booking, ...(patch.booking ?? {}) },
     maintenance: { ...current.maintenance, ...(patch.maintenance ?? {}) },
+    legal: { ...current.legal, ...(patch.legal ?? {}) },
   };
 }
 

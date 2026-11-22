@@ -17,6 +17,7 @@ export interface SessionUser {
   /** null until the welcome tour is finished or skipped */
   tourCompletedAt: string | null;
   preferences: { emailOnMessage: boolean; emailReminders: boolean };
+  legal: { termsVersion: string | null; termsAcceptedAt: string | null; deletionRequestedAt: string | null; mustAcceptTerms: boolean };
   roles: string[];
   permissions: string[];
 }

@@ -18,12 +18,23 @@ export const EmailSchema = z
 
 export const TimezoneSchema = z.string().refine(isValidTimeZone, 'Unknown timezone');
 
+/**
+ * Agreement to the Terms of Service and Privacy Policy, required to sign up or book.
+ * `age` is "adult" (old enough to agree alone) or "guardian" (a parent or guardian
+ * agrees on the person's behalf).
+ */
+export const ConsentFields = {
+  acceptTerms: z.literal(true, { message: 'Please agree to the Terms of Service and Privacy Policy' }),
+  age: z.enum(['adult', 'guardian'], { message: 'Please confirm your age or guardian consent' }),
+};
+
 export const RegisterSchema = z.object({
   email: EmailSchema,
   password: PasswordSchema,
   firstName: z.string().trim().min(1).max(80),
   lastName: z.string().trim().min(1).max(80),
   timezone: TimezoneSchema.default('UTC'),
+  ...ConsentFields,
 });
 
 export const LoginSchema = z.object({

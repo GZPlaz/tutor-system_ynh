@@ -9,8 +9,9 @@ import { Brand } from './Shell';
 import { MaintenanceBanner } from './MaintenanceBanner';
 import { usePublicConfig } from '../lib/config';
 import { useAuth } from '../auth/AuthContext';
+import { LegalFooter } from '../lib/legal';
 
-export function PublicFrame({ children, wide }: { children: ReactNode; wide?: boolean }) {
+export function PublicFrame({ children, wide, footer = true }: { children: ReactNode; wide?: boolean; footer?: boolean }) {
   const config = usePublicConfig();
   const { user } = useAuth();
   return (
@@ -31,6 +32,7 @@ export function PublicFrame({ children, wide }: { children: ReactNode; wide?: bo
       </header>
       <MaintenanceBanner />
       <main className={`public-main ${wide ? 'wide' : ''}`}>{children}</main>
+      {footer && <LegalFooter />}
     </div>
   );
 }

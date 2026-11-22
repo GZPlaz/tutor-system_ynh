@@ -4,6 +4,8 @@
  * Badges use the accent ("highlighter") colour and mean: something is
  * waiting for you.
  */
+import { TermsGate } from './TermsGate';
+import { LegalFooter } from '../lib/legal';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -161,11 +163,12 @@ export function Shell() {
       </aside>
       {open && <div className="sidebar-scrim" onClick={() => setOpen(false)} />}
 
-      {user && !user.tourCompletedAt && <Tour />}
+      {user?.legal.mustAcceptTerms ? <TermsGate /> : user && !user.tourCompletedAt && <Tour />}
       <main className="main">
         <MaintenanceBanner />
         {inSettings && <div className="page wide settings-tabs-wrap"><SettingsTabs /></div>}
         <Outlet />
+        <LegalFooter compact />
       </main>
     </div>
   );

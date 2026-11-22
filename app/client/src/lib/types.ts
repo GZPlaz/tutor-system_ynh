@@ -136,6 +136,8 @@ export interface PublicConfig {
   guestBooking: boolean;
   /** Set while the site is in maintenance mode. */
   maintenance: { message: string } | null;
+  /** Operator details for the legal pages (Admin → Settings → Legal). */
+  legal: LegalInfo;
 }
 
 /** Admin → Settings (GET/PUT /api/settings). */
@@ -150,6 +152,7 @@ export interface AppSettings {
     meetingLinkNudgeMinutes: number;
   };
   maintenance: { enabled: boolean; message: string };
+  legal: LegalInfo;
 }
 
 /** A guest's own booking (GET /api/public/bookings/:id?t=…). */
@@ -278,4 +281,16 @@ export interface Insights {
   subjects: { service: string; completed: number; booked: number }[];
   tutors: { tutor: string; completed: number; missed: number; rating: number | null; ratings: number }[];
   recentFeedback: { rating: number; comment: string; at: string; service: string; tutor: string; sessionAt: string }[];
+}
+
+export interface LegalInfo {
+  operatorName: string;
+  contactEmail: string;
+  postalAddress: string;
+  governingLaw: string;
+  minimumAge: number;
+  parentalConsentAge: number;
+  effectiveDate: string;
+  termsVersion: string;
+  additionalTerms: string;
 }

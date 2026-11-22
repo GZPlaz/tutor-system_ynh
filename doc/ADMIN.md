@@ -116,6 +116,15 @@ Students and tutors have private conversations under **Messages** in the menu.
 - **Limits:** messages are up to 4,000 characters, and each person can send up to 40 messages per 5 minutes.
 - **Permissions:** students and tutors get `messages:send` automatically, including on existing sites when you upgrade. Remove it from a role in Admin → Roles to turn messaging off for that role.
 
+### Legal pages, consent and privacy requests
+
+- **Pages:** `/legal/terms`, `/legal/privacy`, `/legal/cookies`, `/legal/safeguarding` and `/legal/accessibility` are public and linked in the footer of every page and in every email. They are a careful general template for an online tutoring service that works with children. **They are not legal advice: have a lawyer in your state or country review them before relying on them.**
+- **Your details:** fill in **Settings → Legal**: legal business name, privacy contact email, postal address, governing law (for example "the State of Texas, United States") and the two ages (default: under 13 only through a parent's account; under 18 needs a parent or guardian to agree). Anything extra your lawyer asks for, such as refund rules, goes in **Additional terms**. Until the name and email are filled in, administrators see a reminder on the legal pages.
+- **Consent:** creating an account and booking without one both require ticking "I agree to the Terms and Privacy Policy" and confirming age or guardian consent. The date, terms version and guardian consent are stored on the account and shown on the person's page (**Terms accepted**). Accounts that existed before this update are asked to accept once at their next sign-in.
+- **Updating the terms:** change the text (or ask a developer to), then press **Publish updated terms** in Settings → Legal and save. The version number goes up and everyone must accept again at their next visit; a person who declines can only sign out.
+- **Data requests:** on **Profile → Your data**, anyone can download a JSON copy of their information or request account deletion. A deletion request emails everyone with `users:delete` and shows a banner on the person's page. Privacy laws usually expect you to act within one month: check nothing must be kept, then use **Delete account** (upcoming sessions are cancelled and personal details removed). The person can withdraw the request until then. Exports and requests are recorded in the activity log.
+- **Fonts and cookies:** all fonts are served from your own server, so visitors' browsers never contact Google, and the only cookie is the essential sign-in cookie. That is why no cookie banner is needed. If you add analytics or other third-party scripts later, you will need a consent banner and an updated Cookie Policy.
+
 ### Rate limits (schools on one connection)
 
 - **Sign-in attempts:** counted per account and network address, so a classroom signing in together is never blocked as a group. Each account also locks itself after repeated wrong passwords; admins can unlock it from the person's page.

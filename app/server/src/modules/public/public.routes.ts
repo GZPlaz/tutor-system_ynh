@@ -5,7 +5,7 @@
  *
  *  GET  /services                       bookable services
  *  GET  /slots?serviceId&from&to[&tutorId]
- *  POST /bookings                       { serviceId, tutorId, startsAt, firstName, lastName, email, timezone, notes? }
+ *  POST /bookings                       { serviceId, tutorId, startsAt, firstName, lastName, email, timezone, notes?, acceptTerms, age }
  *  GET  /bookings/:id?t=<token>         the guest's own booking (token comes from their emails)
  *  POST /bookings/:id/cancel?t=<token>  { reason? }
  *
@@ -17,7 +17,7 @@ import { rateLimit } from 'express-rate-limit';
 import { BadRequest, NotFound } from '../../lib/errors.js';
 import { verifyGuestToken } from '../../lib/guestToken.js';
 import { parsed, validate } from '../../middleware/validate.js';
-import { EmailSchema, TimezoneSchema } from '../auth/auth.schemas.js';
+import { ConsentFields, EmailSchema, TimezoneSchema } from '../auth/auth.schemas.js';
 import * as svc from '../scheduling/scheduling.service.js';
 
 export const publicRouter = Router();
@@ -54,10 +54,11 @@ const GuestBookingBody = z.object({
   timezone: TimezoneSchema.default('UTC'),
   notes: z.string().trim().max(1000).optional(),
   website: z.string().max(200).optional(), // honeypot: real people never see or fill this
+  ...ConsentFields,
 });
 
 publicRouter.post('/bookings', guestLimiter, validate({ body: GuestBookingBody }), async (req, res) => {
-  const { website, ...input } = parsed(req, 'body', GuestBookingBody);
+  const { website, acceptTerms: _accepted, ...input } = parsed(req, 'body', GuestBookingBody);
   if (website) throw BadRequest('Could not send this request');
   const booking = await svc.createGuestBooking(input);
   res.status(201).json({

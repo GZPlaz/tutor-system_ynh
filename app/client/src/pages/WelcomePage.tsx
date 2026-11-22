@@ -5,6 +5,7 @@
  * colour); everything it says comes from the admin's Branding settings.
  */
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { ConsentControls, LegalFooter, NO_CONSENT, consentBody, consentComplete, type Consent } from '../lib/legal';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Brand } from '../components/Shell';
@@ -57,6 +58,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <MaintenanceBanner />
           {children}
         </div>
+        <LegalFooter compact />
       </section>
     </div>
   );
@@ -152,6 +154,7 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState<Consent>(NO_CONSENT);
   if (user) return <Navigate to="/" replace />;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -159,9 +162,13 @@ export function RegisterPage() {
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     setError(null);
     setFieldErrors({});
+    if (!consentComplete(consent)) {
+      setError('Please agree to the Terms and Privacy Policy, and confirm your age.');
+      return;
+    }
     setBusy(true);
     try {
-      const res = await api<{ status: string }>('/auth/register', { method: 'POST', json: f });
+      const res = await api<{ status: string }>('/auth/register', { method: 'POST', json: { ...f, ...consentBody(consent) } });
       setDone({ name: f.firstName ?? '', status: res.status });
     } catch (err) {
       if (err instanceof ApiError && Array.isArray(err.details)) {
@@ -251,6 +258,7 @@ export function RegisterPage() {
           </select>
           <small className="hint">We show every session time in this zone. We've guessed it from your device.</small>
         </label>
+        <ConsentControls value={consent} onChange={setConsent} />
         <ErrorText>{error}</ErrorText>
         <Button className="block" busy={busy}>Create account</Button>
       </form>

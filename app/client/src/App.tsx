@@ -24,6 +24,7 @@ import { BrandingPage } from './pages/admin/BrandingPage';
 import { ActivityPage } from './pages/admin/ActivityPage';
 import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
 import { PacketsPage } from './pages/PacketsPage';
+import { LegalPage } from './pages/LegalPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { InsightsPage } from './pages/admin/InsightsPage';
@@ -46,6 +47,8 @@ export default function App() {
       <Route path="/booking/:id" element={<GuestBookingPage />} />
       {/* Free study packets: open to everyone, signed in or not. */}
       <Route path="/packets" element={<PacketsPage />} />
+      <Route path="/legal" element={<Navigate to="/legal/terms" replace />} />
+      <Route path="/legal/:doc" element={<LegalPage />} />
 
       {/* Booking works signed-in, or without an account when Admin → Settings allows it. */}
       <Route element={<BookShell />}>

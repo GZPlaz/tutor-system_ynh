@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthContext';
 import { BrandingProvider } from './lib/branding';
 import { ToastProvider } from './components/ui';
 import App from './App';
+import './lib/fonts';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(

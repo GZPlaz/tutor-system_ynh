@@ -8,6 +8,7 @@
  *               403 with a specific code the UI turns into a friendly screen
  *  approve/reject live in modules/users/users.service.ts (admin side).
  */
+import { consentRecord } from '../legal/consent.js';
 import { prisma } from '../../lib/prisma.js';
 import { env } from '../../config/env.js';
 import { AppError, BadRequest, Conflict, Forbidden, Unauthorized } from '../../lib/errors.js';
@@ -30,6 +31,7 @@ export async function register(input: {
   firstName: string;
   lastName: string;
   timezone: string;
+  age: 'adult' | 'guardian';
 }) {
   const rules = settings();
   if (rules.maintenance.enabled) throw new AppError(503, 'MAINTENANCE', maintenanceMessage());
@@ -62,6 +64,7 @@ export async function register(input: {
       status,
       isGuest: false,
       approvedAt: needsApproval ? null : now,
+      ...consentRecord(input.age, now),
     } as const;
     const created = existing
       ? await tx.user.update({
@@ -84,7 +87,12 @@ export async function register(input: {
     return created;
   });
 
-  await audit(user.id, 'user.registered', 'user', user.id, { status, upgradedGuest: !!existing });
+  await audit(user.id, 'user.registered', 'user', user.id, {
+    status,
+    upgradedGuest: !!existing,
+    termsVersion: rules.legal.termsVersion,
+    guardianConsent: input.age === 'guardian',
+  });
   return { id: user.id, email: user.email, status: user.status };
 }
 
@@ -145,11 +153,26 @@ export async function login(input: { email: string; password: string }, meta: Re
 export async function getSessionUser(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, email: true, firstName: true, lastName: true, timezone: true, status: true, tourCompletedAt: true, emailOnMessage: true, emailReminders: true },
+    select: {
+      id: true, email: true, firstName: true, lastName: true, timezone: true, status: true, tourCompletedAt: true,
+      emailOnMessage: true, emailReminders: true, termsVersion: true, termsAcceptedAt: true, deletionRequestedAt: true,
+    },
   });
   const access = await getAccessProfile(userId);
-  const { emailOnMessage, emailReminders, ...rest } = user;
-  return { ...rest, preferences: { emailOnMessage, emailReminders }, roles: access.roles, permissions: [...access.permissions].sort() };
+  const { emailOnMessage, emailReminders, termsVersion, termsAcceptedAt, deletionRequestedAt, ...rest } = user;
+  return {
+    ...rest,
+    preferences: { emailOnMessage, emailReminders },
+    legal: {
+      termsVersion,
+      termsAcceptedAt,
+      deletionRequestedAt,
+      /** True when the person has not accepted the current Terms (never, or an older version). */
+      mustAcceptTerms: termsVersion !== settings().legal.termsVersion,
+    },
+    roles: access.roles,
+    permissions: [...access.permissions].sort(),
+  };
 }
 
 export async function issueAccessTokenFor(userId: string): Promise<string> {
