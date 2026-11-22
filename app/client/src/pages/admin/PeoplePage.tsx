@@ -23,7 +23,7 @@ const FALLBACK_ROLES = [
   { key: 'admin', name: 'Administrator' },
 ];
 
-type Dialog = { kind: 'roles' | 'delete' | 'suspend' | 'reject'; user: UserRow } | { kind: 'invite' } | null;
+type Dialog = { kind: 'roles' | 'delete' | 'suspend' | 'reject' | 'manage'; user: UserRow } | { kind: 'invite' } | null;
 
 export function PeoplePage() {
   const { user: me, can } = useAuth();
@@ -119,6 +119,7 @@ export function PeoplePage() {
                   <span className="row-meta"><Pill tone={STATUS[u.status].tone}>{STATUS[u.status].label}</Pill></span>
                   <span className="row-actions">
                     {u.status === 'PENDING' && can('users:approve') && <Button busy={busy} onClick={() => act(u, 'approve')}>Approve</Button>}
+                    {can('users:manage') && <Button variant="ghost" onClick={() => setDialog({ kind: 'manage', user: u })}>Manage</Button>}
                     {can('users:manage') && <Button variant="ghost" onClick={() => setDialog({ kind: 'roles', user: u })}>Roles</Button>}
                     {can('users:manage') && u.status === 'ACTIVE' && u.id !== me?.id && <Button variant="ghost" onClick={() => setDialog({ kind: 'suspend', user: u })}>Pause</Button>}
                     {can('users:manage') && u.status === 'SUSPENDED' && <Button variant="ghost" busy={busy} onClick={() => act(u, 'reactivate')}>Reactivate</Button>}
@@ -143,6 +144,7 @@ export function PeoplePage() {
       )}
 
       {dialog?.kind === 'invite' && <InviteDialog roles={roleOptions} onClose={() => setDialog(null)} onDone={(name) => { setDialog(null); toast(`Invitation sent to ${name}`); reloadAll(); }} />}
+      {dialog?.kind === 'manage' && <ManageDialog user={dialog.user} isMe={dialog.user.id === me?.id} onClose={() => setDialog(null)} onSaved={(msg) => { toast(msg); reloadAll(); }} />}
       {dialog?.kind === 'roles' && <RolesDialog user={dialog.user} roles={roleOptions} onClose={() => setDialog(null)} onDone={() => { setDialog(null); toast('Roles updated'); reloadAll(); }} />}
       {dialog?.kind === 'reject' && (
         <ConfirmDialog title={`Decline ${fullName(dialog.user)}?`} confirmLabel="Decline sign-up" danger reasonLabel="Reason (included in the email, optional)"
@@ -229,6 +231,60 @@ function RolesDialog({ user, roles, onClose, onDone }: { user: UserRow; roles: {
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!value.length} onClick={() => save()}>Save roles</Button></>}>
       <RoleChecks roles={roles} value={value} onChange={setValue} />
       <ErrorText>{error}</ErrorText>
+    </Modal>
+  );
+}
+
+function ManageDialog({ user, isMe, onClose, onSaved }: { user: UserRow; isMe: boolean; onClose: () => void; onSaved: (msg: string) => void }) {
+  const [form, setForm] = useState({ firstName: user.firstName, lastName: user.lastName, email: user.email, timezone: user.timezone });
+  const [save, saving, saveErr] = useAction(async () => {
+    const changed = Object.fromEntries(Object.entries(form).filter(([k, v]) => v.trim() !== String(user[k as keyof UserRow] ?? '')));
+    if (!Object.keys(changed).length) return onClose();
+    await api(`/users/${user.id}`, { method: 'PATCH', json: changed });
+    onSaved('email' in changed ? `Saved. ${user.firstName} was signed out everywhere because their email changed.` : 'Details saved');
+    onClose();
+  });
+  const [reset, resetting, resetErr] = useAction(async () => {
+    const r = await api<{ email: string }>(`/users/${user.id}/send-password-reset`, { method: 'POST' });
+    onSaved(`Password reset link sent to ${r.email}`);
+  });
+  const [signOut, signingOut, signOutErr] = useAction(async () => {
+    await api(`/users/${user.id}/sign-out-everywhere`, { method: 'POST' });
+    onSaved(`${user.firstName} was signed out on every device`);
+  });
+  const formId = 'manage-user';
+  return (
+    <Modal title={`Manage ${fullName(user)}`} onClose={onClose}
+      footer={<><Button variant="secondary" onClick={onClose}>Close</Button><Button form={formId} busy={saving}>Save details</Button></>}>
+      <form id={formId} className="form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <div className="form-row">
+          <label className="field"><span>First name</span><input required maxLength={80} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></label>
+          <label className="field"><span>Last name</span><input required maxLength={80} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
+        </div>
+        <label className="field">
+          <span>Email</span>
+          <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          {form.email.trim().toLowerCase() !== user.email && <small className="hint">They will sign in with the new address and be signed out of every device.</small>}
+        </label>
+        <label className="field">
+          <span>Time zone</span>
+          <select value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })}>{allTimeZones().map((tz) => <option key={tz}>{tz}</option>)}</select>
+        </label>
+        <ErrorText>{saveErr}</ErrorText>
+      </form>
+      <div className="manage-actions">
+        <div className="manage-action">
+          <span><strong>Password reset</strong><small>Email {user.firstName} a link to choose a new password. Their current password keeps working until they use it.</small></span>
+          <Button variant="secondary" busy={resetting} onClick={() => void reset()}>Send reset link</Button>
+        </div>
+        {!isMe && (
+          <div className="manage-action">
+            <span><strong>Sign out everywhere</strong><small>Ends every session on every device, for example after a lost phone. They can sign in again.</small></span>
+            <Button variant="secondary" busy={signingOut} onClick={() => void signOut()}>Sign out</Button>
+          </div>
+        )}
+        <ErrorText>{resetErr || signOutErr}</ErrorText>
+      </div>
     </Modal>
   );
 }

@@ -14,6 +14,9 @@ export interface SessionUser {
   lastName: string;
   timezone: string;
   status: string;
+  /** null until the welcome tour is finished or skipped */
+  tourCompletedAt: string | null;
+  preferences: { emailOnMessage: boolean; emailReminders: boolean };
   roles: string[];
   permissions: string[];
 }

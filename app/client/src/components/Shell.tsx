@@ -13,6 +13,7 @@ import { useMessageSummary } from '../lib/messages';
 import { Icon, type IconName } from './Icon';
 import { Avatar } from './ui';
 import { MaintenanceBanner } from './MaintenanceBanner';
+import { Tour } from './Tour';
 
 interface Item {
   to: string;
@@ -112,7 +113,7 @@ export function Shell() {
               <div key={i} className="nav-group">
                 {g.title && <p className="nav-title">{g.title}</p>}
                 {visible.map((it) => (
-                  <NavLink key={it.to} to={it.to} end={it.end} className="nav-link">
+                  <NavLink key={it.to} to={it.to} end={it.end} className="nav-link" data-tour={it.to}>
                     <Icon name={it.icon} />
                     <span>{it.label}</span>
                     {!!it.badge && <span className="nav-badge" aria-label={`${it.badge} waiting`}>{it.badge}</span>}
@@ -123,7 +124,7 @@ export function Shell() {
           })}
         </nav>
         <div className="sidebar-footer">
-          <NavLink to="/profile" className="me">
+          <NavLink to="/profile" className="me" data-tour="/profile">
             <Avatar name={name} size={34} />
             <span className="me-text">
               <strong>{name}</strong>
@@ -137,6 +138,7 @@ export function Shell() {
       </aside>
       {open && <div className="sidebar-scrim" onClick={() => setOpen(false)} />}
 
+      {user && !user.tourCompletedAt && <Tour />}
       <main className="main">
         <MaintenanceBanner />
         <Outlet />

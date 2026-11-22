@@ -142,6 +142,11 @@ model User {
   /// signed link in their emails. Registering with the same email later turns the guest
   /// into a normal account and keeps their booking history.
   isGuest          Boolean    @default(false) @map("is_guest")
+  /// Set when the person finishes or skips the welcome tour; null shows it at next sign-in.
+  tourCompletedAt  DateTime?  @map("tour_completed_at") @db.Timestamptz(3)
+  /// Email preferences (Profile → Notifications). Account and booking emails always send.
+  emailOnMessage   Boolean    @default(true) @map("email_on_message")
+  emailReminders   Boolean    @default(true) @map("email_reminders")
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 

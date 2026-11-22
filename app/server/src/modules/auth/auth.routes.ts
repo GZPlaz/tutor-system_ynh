@@ -13,6 +13,7 @@
  *  POST /me/password       change password
  */
 import { Router } from 'express';
+import { z } from 'zod';
 import { prisma } from '../../lib/prisma.js';
 import { Unauthorized } from '../../lib/errors.js';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -107,6 +108,20 @@ authRouter.patch('/me', authenticate, validate({ body: UpdateProfileSchema }), a
   const userId = authOf(req).userId;
   await prisma.user.update({ where: { id: userId }, data: parsed(req, 'body', UpdateProfileSchema) });
   res.json(await auth.getSessionUser(userId));
+});
+
+/** Finish/skip the welcome tour ({ done: true }) or ask to see it again ({ done: false }). */
+authRouter.post('/me/tour', authenticate, validate({ body: z.object({ done: z.boolean() }) }), async (req, res) => {
+  const userId = authOf(req).userId;
+  const { done } = req.valid.body as { done: boolean };
+  await prisma.user.update({ where: { id: userId }, data: { tourCompletedAt: done ? new Date() : null } });
+  res.json(await auth.getSessionUser(userId));
+});
+
+/** Signed in but forgot the current password: email a reset link to the account's own address. */
+authRouter.post('/me/password-reset-email', authenticate, authLimiter, async (req, res) => {
+  const { email } = await auth.sendPasswordResetTo(authOf(req).userId);
+  res.json({ message: `We sent a reset link to ${email}.` });
 });
 
 authRouter.post('/me/password', authenticate, validate({ body: ChangePasswordSchema }), async (req, res) => {

@@ -622,3 +622,38 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
   .thread-head { padding: 10px 12px; }
   .bubble { max-width: 86%; }
 }
+
+/* ---- welcome tour ---- */
+.tour { position: fixed; inset: 0; z-index: 90; }
+.tour-backdrop { position: absolute; inset: 0; background: rgb(20 24 28 / 0.45); }
+.tour-spotlight { position: fixed; border-radius: var(--r-md); box-shadow: 0 0 0 9999px rgb(20 24 28 / 0.45), 0 0 0 2px var(--brand-ink), 0 0 0 4px var(--brand); pointer-events: none; transition: all 180ms ease; }
+.tour-card { position: fixed; width: min(340px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: 18px 20px 16px; display: grid; gap: 8px; outline: none; }
+.tour-card.centred { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px)); }
+.tour-card h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+.tour-card p { color: var(--ink); line-height: 1.55; }
+.tour-progress { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted) !important; }
+.tour-hint { font-size: 0.86rem; color: var(--muted) !important; }
+.tour-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.tour-actions .btn { min-height: 34px; padding: 6px 14px; }
+@media (prefers-reduced-motion: reduce) { .tour-spotlight { transition: none; } }
+
+/* ---- admin setup checklist / manage person ---- */
+.checklist { margin-bottom: 24px; display: grid; gap: 12px; }
+.checklist-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.checklist-head .panel-title { margin-bottom: 2px; }
+.checklist-bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.checklist-bar span { display: block; height: 100%; background: var(--brand); transition: width 200ms ease; }
+.checklist-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.checklist-steps li { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-radius: var(--r-sm); }
+.checklist-steps a { flex: 1; display: grid; text-decoration: none; color: var(--ink); }
+.checklist-steps a:hover strong { color: var(--brand-text); text-decoration: underline; }
+.checklist-steps strong { font-weight: 500; }
+.checklist-steps small { color: var(--muted); }
+.checklist-steps li.done strong { color: var(--muted); text-decoration: line-through; }
+.check-mark { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; }
+.checklist-steps li.done .check-mark { background: var(--good); border-color: var(--good); color: #fff; }
+.manage-actions { display: grid; gap: 0; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
+.manage-action { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); }
+.manage-action:first-child { border-top: 0; }
+.manage-action span { flex: 1; display: grid; gap: 2px; }
+.manage-action small { color: var(--muted); }

@@ -14,7 +14,7 @@ import { BadRequest, Conflict, NotFound } from '../../lib/errors.js';
 import { audit } from '../audit/audit.service.js';
 import { enqueueEmail } from '../email/email.service.js';
 import { invalidateUserAccess, setUserRoles } from '../rbac/rbac.service.js';
-import { createPasswordToken } from '../auth/auth.service.js';
+import { createPasswordToken, sendPasswordResetTo } from '../auth/auth.service.js';
 import { revokeAllSessions } from '../auth/tokens.js';
 import { bookingInclude, cancelMany } from '../scheduling/scheduling.service.js';
 import { removeFile } from '../resources/storage.js';
@@ -109,6 +109,36 @@ export async function suspendUser(actorId: string, id: string, ip?: string) {
   invalidateUserAccess(id);
   await audit(actorId, 'user.suspended', 'user', id, undefined, ip);
   return getUser(id);
+}
+
+/** Admin edit of someone's details. Changing the email signs them out everywhere. */
+export async function updateUser(
+  actorId: string,
+  id: string,
+  data: { firstName?: string; lastName?: string; email?: string; timezone?: string },
+  ip?: string,
+) {
+  const before = await prisma.user.findUnique({ where: { id }, select: { email: true, deletedAt: true, isGuest: true } });
+  if (!before || before.deletedAt) throw NotFound('User');
+  if (data.email && data.email !== before.email) {
+    const taken = await prisma.user.findUnique({ where: { email: data.email }, select: { id: true } });
+    if (taken) throw Conflict('Another account already uses that email address', 'EMAIL_TAKEN');
+  }
+  await prisma.user.update({ where: { id }, data });
+  if (data.email && data.email !== before.email) await revokeAllSessions(id);
+  await audit(actorId, 'user.updated', 'user', id, { ...data, previousEmail: data.email && data.email !== before.email ? before.email : undefined }, ip);
+  return getUser(id);
+}
+
+export async function sendPasswordReset(actorId: string, id: string, ip?: string) {
+  const { email } = await sendPasswordResetTo(id);
+  await audit(actorId, 'user.password_reset_sent', 'user', id, undefined, ip);
+  return { email };
+}
+
+export async function signOutEverywhere(actorId: string, id: string, ip?: string) {
+  await revokeAllSessions(id);
+  await audit(actorId, 'user.signed_out_everywhere', 'user', id, undefined, ip);
 }
 
 export async function reactivateUser(actorId: string, id: string, ip?: string) {

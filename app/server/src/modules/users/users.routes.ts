@@ -8,6 +8,9 @@
  *  POST  /:id/reject          PENDING → REJECTED (+ email)
  *  POST  /:id/suspend         ACTIVE → SUSPENDED (revokes sessions)
  *  POST  /:id/reactivate      SUSPENDED → ACTIVE
+ *  PATCH /:id                 edit name, email, time zone (users:manage)
+ *  POST  /:id/send-password-reset   email a reset link
+ *  POST  /:id/sign-out-everywhere   revoke every session
  *  PUT   /:id/roles           replace role set
  *  DELETE /:id                delete the account (users:delete)
  */
@@ -89,6 +92,28 @@ usersRouter.put(
     res.json(await users.getUser(id));
   },
 );
+
+const UpdateUserBody = z
+  .object({
+    firstName: z.string().trim().min(1).max(80).optional(),
+    lastName: z.string().trim().min(1).max(80).optional(),
+    email: EmailSchema.optional(),
+    timezone: TimezoneSchema.optional(),
+  })
+  .refine((b) => Object.keys(b).length > 0, { message: 'Nothing to change' });
+
+usersRouter.patch('/:id', requirePermission(P.USERS_MANAGE), validate({ params: IdParams, body: UpdateUserBody }), async (req, res) => {
+  res.json(await users.updateUser(authOf(req).userId, parsed(req, 'params', IdParams).id, parsed(req, 'body', UpdateUserBody), req.ip));
+});
+
+usersRouter.post('/:id/send-password-reset', requirePermission(P.USERS_MANAGE), validate({ params: IdParams }), async (req, res) => {
+  res.json(await users.sendPasswordReset(authOf(req).userId, parsed(req, 'params', IdParams).id, req.ip));
+});
+
+usersRouter.post('/:id/sign-out-everywhere', requirePermission(P.USERS_MANAGE), validate({ params: IdParams }), async (req, res) => {
+  await users.signOutEverywhere(authOf(req).userId, parsed(req, 'params', IdParams).id, req.ip);
+  res.status(204).end();
+});
 
 usersRouter.delete('/:id', requirePermission(P.USERS_DELETE), validate({ params: IdParams }), async (req, res) => {
   res.json(await users.deleteUser(authOf(req).userId, parsed(req, 'params', IdParams).id, req.ip));

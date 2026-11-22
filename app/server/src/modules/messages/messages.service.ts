@@ -23,7 +23,7 @@ import { canAskAbout, otherSide, preview, shouldEmail, sideOf, type Side } from 
 
 type Auth = Express.AuthContext;
 
-const personSelect = { id: true, firstName: true, lastName: true, email: true, timezone: true, status: true, deletedAt: true, isGuest: true } as const;
+const personSelect = { id: true, firstName: true, lastName: true, email: true, timezone: true, status: true, deletedAt: true, isGuest: true, emailOnMessage: true } as const;
 const name = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`.trim();
 const reachable = (u: { status: string; deletedAt: Date | null; isGuest: boolean }) => u.status === 'ACTIVE' && !u.deletedAt && !u.isGuest;
 
@@ -203,13 +203,13 @@ export async function markRead(auth: Auth, conversationId: string) {
 async function notify(
   conv: { id: string; studentNotifiedAt: Date | null; tutorNotifiedAt: Date | null; studentLastReadAt: Date | null; tutorLastReadAt: Date | null },
   to: Side,
-  recipient: { email: string; status: string; deletedAt: Date | null; isGuest: boolean },
+  recipient: { email: string; status: string; deletedAt: Date | null; isGuest: boolean; emailOnMessage: boolean },
   kind: 'MESSAGE' | 'QUESTION',
   template: 'message_received' | 'session_question',
   payload: Record<string, unknown>,
   tx: Prisma.TransactionClient,
 ) {
-  if (!reachable(recipient)) return;
+  if (!reachable(recipient) || !recipient.emailOnMessage) return;
   const notifiedAt = to === 'student' ? conv.studentNotifiedAt : conv.tutorNotifiedAt;
   const lastReadAt = to === 'student' ? conv.studentLastReadAt : conv.tutorLastReadAt;
   if (!shouldEmail({ kind, notifiedAt, lastReadAt })) return;

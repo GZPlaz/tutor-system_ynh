@@ -42,6 +42,8 @@ export const UpdateProfileSchema = z.object({
   firstName: z.string().trim().min(1).max(80).optional(),
   lastName: z.string().trim().min(1).max(80).optional(),
   timezone: TimezoneSchema.optional(),
+  emailOnMessage: z.boolean().optional(),
+  emailReminders: z.boolean().optional(),
 });
 
 export const ChangePasswordSchema = z.object({

@@ -145,10 +145,11 @@ export async function login(input: { email: string; password: string }, meta: Re
 export async function getSessionUser(userId: string) {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, email: true, firstName: true, lastName: true, timezone: true, status: true },
+    select: { id: true, email: true, firstName: true, lastName: true, timezone: true, status: true, tourCompletedAt: true, emailOnMessage: true, emailReminders: true },
   });
   const access = await getAccessProfile(userId);
-  return { ...user, roles: access.roles, permissions: [...access.permissions].sort() };
+  const { emailOnMessage, emailReminders, ...rest } = user;
+  return { ...rest, preferences: { emailOnMessage, emailReminders }, roles: access.roles, permissions: [...access.permissions].sort() };
 }
 
 export async function issueAccessTokenFor(userId: string): Promise<string> {
@@ -175,6 +176,15 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (!user || user.isGuest || user.status === 'REJECTED') return;
   const token = await createPasswordToken(user.id, env.PASSWORD_RESET_TTL_MIN);
   await enqueueEmail(user.email, 'password_reset', { token, expiresInMinutes: env.PASSWORD_RESET_TTL_MIN });
+}
+
+/** Email a reset link to a specific account (signed-in user for themselves, or an admin for someone). */
+export async function sendPasswordResetTo(userId: string): Promise<{ email: string }> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, email: true, isGuest: true, status: true, deletedAt: true } });
+  if (user.isGuest || user.deletedAt || user.status === 'REJECTED') throw BadRequest('This account cannot sign in, so it has no password to reset.');
+  const token = await createPasswordToken(user.id, env.PASSWORD_RESET_TTL_MIN);
+  await enqueueEmail(user.email, 'password_reset', { token, expiresInMinutes: env.PASSWORD_RESET_TTL_MIN });
+  return { email: user.email };
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {

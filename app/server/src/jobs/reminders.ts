@@ -19,8 +19,8 @@ type Column = 'reminder24hSentAt' | 'reminder1hSentAt' | 'linkNudgeSentAt';
 
 const people = {
   service: { select: { name: true } },
-  student: { select: { email: true, firstName: true, lastName: true, timezone: true, isGuest: true } },
-  tutor: { select: { email: true, firstName: true, lastName: true, timezone: true } },
+  student: { select: { email: true, firstName: true, lastName: true, timezone: true, isGuest: true, emailReminders: true } },
+  tutor: { select: { email: true, firstName: true, lastName: true, timezone: true, emailReminders: true } },
 } as const;
 
 async function dueBookings(column: Column, withinMinutes: number, extra: Prisma.BookingWhereInput = {}) {
@@ -62,13 +62,14 @@ export async function sendReminders(): Promise<void> {
       const minutesLeft = (b.startsAt.getTime() - Date.now()) / 60_000;
       if (minutesLeft < plan.skipUnderMin) continue; // claimed, deliberately not sent
       const base = { serviceName: b.service.name, leadLabel: plan.label };
-      await enqueueEmail(b.student.email, 'session_reminder', {
+      // Guests have no profile to change preferences, so they always get reminders.
+      if (b.student.isGuest || b.student.emailReminders) await enqueueEmail(b.student.email, 'session_reminder', {
         ...base,
         otherPartyName: `${b.tutor.firstName} ${b.tutor.lastName}`,
         when: formatForUser(b.startsAt, b.student.timezone),
         ...(b.student.isGuest ? { manageUrl: guestManageUrl(b.id) } : {}),
       });
-      await enqueueEmail(b.tutor.email, 'session_reminder', {
+      if (b.tutor.emailReminders) await enqueueEmail(b.tutor.email, 'session_reminder', {
         ...base,
         otherPartyName: `${b.student.firstName} ${b.student.lastName}`,
         when: formatForUser(b.startsAt, b.tutor.timezone),

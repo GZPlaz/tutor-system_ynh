@@ -21,6 +21,23 @@ No restart needed; changes apply within seconds.
 
 Branding, people, roles and services have their own pages in the Admin menu. There are no payment features: every session is free.
 
+### First sign-in, tour and setup checklist
+
+- **Welcome tour:** after someone's first sign-in, a short tour points at the menu items that matter for them. Students learn to book, join and message. Tutors learn to set hours, run sessions and ask questions. Admins see where the controls are. It can be skipped, and restarted from **Profile → Take the tour again**. People who had already signed in before this update don't see it.
+- **Setup checklist:** administrators see "Get your site ready" on the home page until subjects, tutors and assignments exist. **Hide** removes it on that browser.
+- **Tutors without hours** see a reminder on their home page until they set their weekly availability.
+
+### Managing a person (Admin → People → Manage)
+
+- **Edit** their name, email and time zone. Changing the email signs them out everywhere.
+- **Send a password reset link.** Their current password keeps working until they use the link.
+- **Sign them out everywhere**, for example after a lost device.
+- Each of these is recorded in the activity log. Pause, roles and delete are on the same row as before.
+
+People can also, from their own **Profile**:
+- turn message emails and session reminders on or off (booking and account emails always send)
+- email themselves a reset link if they've forgotten their current password
+
 ### Messages
 
 Students and tutors have private conversations under **Messages** in the menu.
