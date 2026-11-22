@@ -12,6 +12,7 @@ import { api, downloadFile } from '../lib/api';
 import { fmtTime } from '../lib/time';
 import type { Session } from '../lib/types';
 import { Icon } from './Icon';
+import { ReportDialog } from './ReportDialog';
 import { Button, ConfirmDialog, ErrorText, Modal, Pill, useAction, useToast, type Tone } from './ui';
 
 function statusFor(s: Session): { tone: Tone; label: string } {
@@ -60,6 +61,7 @@ export function SessionCard({
   const tz = user?.timezone;
   const [dialog, setDialog] = useState<Dialog>(null);
   const [asking, setAsking] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const canMessage = can('messages:send');
   const summary = useMessageSummary(canMessage && s.myRole === 'student');
   const openQuestion = summary.openQuestions.find((q) => q.bookingId === s.id);
@@ -97,7 +99,7 @@ export function SessionCard({
         <p className="session-when">
           <span className="sr-only">{fullDate}, </span>
           {fmtTime(s.startsAt, tz)} – {fmtTime(s.endsAt, tz)}
-          {other ? <> with <strong>{other.name}</strong></> : <> — {s.student.name} with {s.tutor.name}</>}
+          {other ? <> with {s.myRole === 'tutor' && can('students:read_notes') ? <Link to={`/students/${s.student.id}`} className="person-link">{other.name}</Link> : <strong>{other.name}</strong>}</> : <> — {s.student.name} with {s.tutor.name}</>}
         </p>
 
         {s.notes && s.myRole !== 'student' && <p className="session-note">“{s.notes}”</p>}
@@ -127,13 +129,14 @@ export function SessionCard({
 
           <span className="spacer" />
           {messageLink && <Link className="link-btn" to={messageLink}>Message {other!.name.split(' ')[0]}</Link>}
-          {canMessage && s.myRole === 'tutor' && upcoming && <button className="link-btn" onClick={() => setAsking(true)}>Ask a question</button>}
-          {upcoming && s.myRole !== 'staff' && <button className="link-btn" onClick={() => void downloadFile(`/sessions/${s.id}/calendar.ics`, `${s.service.replace(/[^\w-]+/g, '-')}.ics`).catch(() => toast("Couldn't download the calendar file"))}>Add to calendar</button>}
-          {a.postLink && s.meetingUrl && !editingLink && (
-            <button className="link-btn" onClick={() => setEditingLink(true)}>Change link</button>
-          )}
-          {a.noShow && <button className="link-btn" onClick={() => setDialog('noShow')}>Student didn't come</button>}
-          {a.cancel && <button className="link-btn" onClick={() => setDialog('cancel')}>Cancel</button>}
+          <MoreMenu items={[
+            canMessage && s.myRole === 'tutor' && upcoming && { label: 'Ask a question before the session', onClick: () => setAsking(true) },
+            upcoming && s.myRole !== 'staff' && { label: 'Add to calendar', onClick: () => void downloadFile(`/sessions/${s.id}/calendar.ics`, `${s.service.replace(/[^\w-]+/g, '-')}.ics`).catch(() => toast("Couldn't download the calendar file")) },
+            a.postLink && !!s.meetingUrl && !editingLink && { label: 'Change Meet link', onClick: () => setEditingLink(true) },
+            a.noShow && { label: "Mark: student didn't come", onClick: () => setDialog('noShow') },
+            a.cancel && { label: 'Cancel session', onClick: () => setDialog('cancel'), danger: true },
+            s.myRole === 'student' && { label: 'Report a problem', onClick: () => setReporting(true), danger: true },
+          ]} />
         </div>
 
         {editingLink && (
@@ -185,6 +188,7 @@ export function SessionCard({
         )}
       </div>
 
+      {reporting && <ReportDialog tutor={s.tutor} bookingId={s.id} onClose={() => setReporting(false)} onDone={() => { setReporting(false); toast('Report sent to the team. Thank you for telling us.'); }} />}
       {asking && <AskQuestion session={s} onClose={() => setAsking(false)} onDone={() => { setAsking(false); toast(`Question sent — ${s.student.name.split(' ')[0]} was emailed`); }} />}
 
       {dialog === 'decline' && (
@@ -339,6 +343,30 @@ function FeedbackBlock({ session: s, onSaved }: { session: Session; onSaved: () 
         </>
       )}
       <ErrorText>{error}</ErrorText>
+    </div>
+  );
+}
+
+type MenuItem = { label: string; onClick: () => void; danger?: boolean };
+
+/** Secondary actions behind one "More" button, so each card shows only its main action. */
+function MoreMenu({ items }: { items: (MenuItem | false | undefined | null)[] }) {
+  const list = items.filter(Boolean) as MenuItem[];
+  const [open, setOpen] = useState(false);
+  if (!list.length) return null;
+  return (
+    <div className="more-menu" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}>
+      <button type="button" className="btn ghost more-trigger" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+        More <Icon name="chevronRight" size={14} className="more-chevron" />
+      </button>
+      {open && (
+        <div className="more-items" role="menu" onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+          {list.map((it) => (
+            <button key={it.label} type="button" role="menuitem" className={it.danger ? 'danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

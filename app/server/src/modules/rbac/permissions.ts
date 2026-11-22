@@ -44,6 +44,11 @@ export const PERMISSIONS = {
   GROUPS_MANAGE: { key: 'groups:manage', category: 'Resources', description: 'Create classes and manage membership' },
   PACKETS_MANAGE: { key: 'packets:manage', category: 'Resources', description: 'Upload, edit and remove the free study packets on the public /packets page' },
 
+  // Students & safety
+  STUDENT_NOTES_READ: { key: 'students:read_notes', category: 'Students', description: "Open student profiles and read tutors' notes about students" },
+  STUDENT_NOTES_WRITE: { key: 'students:write_notes', category: 'Students', description: 'Write notes about students they teach (shared with the student, or tutors only)' },
+  SAFETY_MANAGE: { key: 'safety:manage', category: 'Students', description: 'Review and resolve reports about tutors' },
+
   // Messages
   MESSAGES_SEND: { key: 'messages:send', category: 'Messages', description: 'Message their tutors or students, and answer questions about upcoming sessions' },
   MESSAGES_READ_ANY: { key: 'messages:read_any', category: 'Messages', description: 'Read every conversation for safeguarding (read-only; every view is logged)' },
@@ -90,6 +95,8 @@ export const SYSTEM_ROLES = {
       P.GROUPS_MANAGE,
       P.USERS_READ,
       P.MESSAGES_SEND,
+      P.STUDENT_NOTES_READ,
+      P.STUDENT_NOTES_WRITE,
     ],
   },
   student: {

@@ -18,6 +18,8 @@ import { publicRouter } from './public/public.routes.js';
 import { packetsRouter, publicPacketsRouter } from './packets/packets.routes.js';
 import { messagesRouter } from './messages/messages.routes.js';
 import { insightsRouter } from './insights/insights.routes.js';
+import { reportsRouter } from './safety/reports.routes.js';
+import { studentsRouter } from './students/students.routes.js';
 
 export const modules: { path: string; router: Router }[] = [
   { path: '/auth', router: authRouter },
@@ -32,6 +34,8 @@ export const modules: { path: string; router: Router }[] = [
   { path: '/settings', router: settingsRouter },
   { path: '/messages', router: messagesRouter },
   { path: '/insights', router: insightsRouter },
+  { path: '/reports', router: reportsRouter },
+  { path: '/students', router: studentsRouter },
   { path: '/packets', router: packetsRouter },
   // Before '/public' so the free packets are reachable even when guest booking is off.
   { path: '/public/packets', router: publicPacketsRouter },

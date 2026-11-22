@@ -54,6 +54,11 @@ function stepsFor(can: (p: string) => boolean, canAny: (...p: string[]) => boole
         ? 'Talk privately with your students. On any upcoming session, "Ask a question" lets you find out what they need before you meet.'
         : 'Message your tutors any time. If a tutor asks you something before a session, it shows up here and on your home page.',
     },
+    can('students:read_notes') && {
+      target: '/students',
+      title: 'Your students',
+      body: "Open any student to see notes from every tutor, and add your own. Choose whether a note is for tutors only or visible to the student too.",
+    },
     canAny('resources:read_assigned', 'resources:create') && {
       target: '/resources',
       title: tutor ? 'Share materials' : 'Your materials',
@@ -71,15 +76,20 @@ function stepsFor(can: (p: string) => boolean, canAny: (...p: string[]) => boole
       title: 'Set up subjects',
       body: 'Admins: create the subjects people can book, and choose which tutors teach each one.',
     },
-    can('users:read') && {
+    can('users:manage') && {
       target: '/admin/people',
       title: 'People',
-      body: 'Approve sign-ups, invite tutors, and manage any account: roles, details, password resets and signing someone out.',
+      body: 'Approve sign-ups and invite tutors. Open anyone to see their sessions, reports and activity, and to manage their account. Select several people for bulk actions.',
+    },
+    can('safety:manage') && {
+      target: '/admin/reports',
+      title: 'Reports',
+      body: 'Reports about tutors arrive here (and by email). Review them, keep an internal note, and mark them resolved.',
     },
     can('settings:manage') && {
       target: '/admin/settings',
-      title: 'Rules and switches',
-      body: 'Who can sign up, how far ahead people can book, cancellation rules, and maintenance mode.',
+      title: 'Settings',
+      body: 'Sign-up and booking rules, branding, roles and the activity log, all under one menu item.',
     },
     {
       target: '/profile',

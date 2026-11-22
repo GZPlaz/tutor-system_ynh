@@ -29,6 +29,7 @@ export function HomePage() {
   const msgs = useMessageSummary(can('messages:send'));
   const myHours = useApi<{ rules: AvailabilityRule[] }>(can('availability:manage_own') && user ? `/scheduling/availability/${user.id}` : null);
   const noHours = !!myHours.data && myHours.data.rules.length === 0;
+  const sharedNotes = useApi<{ id: string; body: string; author: string; createdAt: string }[]>(can('bookings:create') ? '/students/me/notes' : null);
   const items = sessions.data ?? [];
   const requests = items.filter((s) => s.actions.confirm);
   const scheduled = items.filter((s) => !s.actions.confirm);
@@ -105,6 +106,19 @@ export function HomePage() {
           <div className="session-list compact">
             {later.map((s) => <SessionCard key={s.id} session={s} onChange={sessions.reload} showActivity={false} />)}
           </div>
+        </Section>
+      )}
+
+      {(sharedNotes.data?.length ?? 0) > 0 && (
+        <Section title="Notes from your tutors">
+          <ul className="notes">
+            {sharedNotes.data!.slice(0, 3).map((n) => (
+              <li key={n.id} className="note">
+                <div className="note-head"><strong>{n.author}</strong><span className="muted">{fmtDate(n.createdAt, user?.timezone)}</span></div>
+                <p>{n.body}</p>
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
 

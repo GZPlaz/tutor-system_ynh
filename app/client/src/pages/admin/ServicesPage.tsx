@@ -28,8 +28,8 @@ export function ServicesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Services" description="The subjects students can book, how long each session lasts, and which tutors teach it."
-        action={<Button icon="plus" onClick={() => setDialog({ kind: 'edit', service: null })}>Add service</Button>} />
+      <PageHeader title="Subjects" description="The subjects students can book, how long each session lasts, and which tutors teach it."
+        action={<Button icon="plus" onClick={() => setDialog({ kind: 'edit', service: null })}>Add subject</Button>} />
       <ErrorText>{services.error}</ErrorText>
       {services.loading && !services.data ? <Loading /> : !services.data?.length ? (
         <Empty icon="layers" title="No services yet" action={<Button icon="plus" onClick={() => setDialog({ kind: 'edit', service: null })}>Add your first service</Button>}>

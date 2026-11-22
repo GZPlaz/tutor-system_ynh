@@ -70,6 +70,27 @@ enum ResourceType {
   VIDEO // external video URL (YouTube, Drive, Vimeo, ...)
 }
 
+enum ReportCategory {
+  SAFETY
+  CONDUCT
+  NO_SHOW
+  QUALITY
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+/// SHARED = the student can read it too; TUTORS_ONLY = tutors and admins only.
+enum NoteVisibility {
+  SHARED
+  TUTORS_ONLY
+}
+
 /// MESSAGE = ordinary chat; QUESTION = a tutor's question about an upcoming session,
 /// highlighted for the student until they answer it.
 enum MessageKind {
@@ -181,6 +202,11 @@ model User {
   conversationsAsTutor   Conversation[] @relation("ConversationTutor")
   messagesSent           Message[]
   feedbackGiven          SessionFeedback[]
+  reportsAbout           TutorReport[]    @relation("ReportTutor")
+  reportsFiled           TutorReport[]    @relation("ReportReporter")
+  reportsHandled         TutorReport[]    @relation("ReportHandler")
+  notesAbout             StudentNote[]    @relation("NoteStudent")
+  notesWritten           StudentNote[]    @relation("NoteAuthor")
 
   subscriptions  Subscription[]
   payments       Payment[]
@@ -436,6 +462,7 @@ model Booking {
   creditEntries SessionCredit[]
   messages      Message[]
   feedback      SessionFeedback?
+  reports       TutorReport[]
 
   @@index([tutorId, startsAt])
   @@index([studentId, startsAt])
@@ -609,6 +636,49 @@ model SessionFeedback {
 
   @@index([studentId])
   @@map("session_feedback")
+}
+
+/// A report about a tutor, reviewed by admins with safety:manage.
+model TutorReport {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tutorId     String         @map("tutor_id") @db.Uuid
+  reporterId  String         @map("reporter_id") @db.Uuid
+  bookingId   String?        @map("booking_id") @db.Uuid
+  category    ReportCategory
+  details     String
+  status      ReportStatus   @default(OPEN)
+  /// Internal note by the admin handling it; never shown to the reporter or tutor.
+  adminNote   String?        @map("admin_note")
+  handledById String?        @map("handled_by_id") @db.Uuid
+  handledAt   DateTime?      @map("handled_at") @db.Timestamptz(3)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tutor     User     @relation("ReportTutor", fields: [tutorId], references: [id], onDelete: Cascade)
+  reporter  User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  handledBy User?    @relation("ReportHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([tutorId])
+  @@map("tutor_reports")
+}
+
+/// A tutor's note about a student. Every tutor can read it; SHARED notes are also shown to the student.
+model StudentNote {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String         @map("student_id") @db.Uuid
+  authorId   String         @map("author_id") @db.Uuid
+  body       String
+  visibility NoteVisibility @default(TUTORS_ONLY)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  student User @relation("NoteStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  author  User @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@map("student_notes")
 }
 
 // -----------------------------------------------------------------------------

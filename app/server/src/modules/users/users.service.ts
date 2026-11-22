@@ -141,6 +141,111 @@ export async function signOutEverywhere(actorId: string, id: string, ip?: string
   await audit(actorId, 'user.signed_out_everywhere', 'user', id, undefined, ip);
 }
 
+// ---- admin control panel -----------------------------------------------------------
+
+/** Everything an admin needs on one person's page. */
+export async function userOverview(viewer: Express.AuthContext, id: string) {
+  const u = await prisma.user.findFirst({
+    where: { id, deletedAt: null },
+    select: {
+      ...userSelect,
+      isGuest: true, failedLoginCount: true, lockedUntil: true, tourCompletedAt: true,
+      emailOnMessage: true, emailReminders: true, rejectionReason: true,
+      approvedBy: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!u) throw NotFound('User');
+  const now = new Date();
+  const [asStudent, asTutor, upcoming, reports, notes, activity] = await Promise.all([
+    prisma.booking.groupBy({ by: ['status'], where: { studentId: id }, _count: { _all: true } }),
+    prisma.booking.groupBy({ by: ['status'], where: { tutorId: id }, _count: { _all: true } }),
+    prisma.booking.findMany({
+      where: { OR: [{ studentId: id }, { tutorId: id }], status: { in: ['PENDING', 'CONFIRMED'] }, endsAt: { gt: now } },
+      orderBy: { startsAt: 'asc' },
+      take: 10,
+      select: { id: true, startsAt: true, status: true, service: { select: { name: true } }, studentId: true, student: { select: { firstName: true, lastName: true } }, tutor: { select: { firstName: true, lastName: true } } },
+    }),
+    viewer.can('safety:manage')
+      ? prisma.tutorReport.findMany({ where: { tutorId: id }, orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, category: true, status: true, createdAt: true } })
+      : Promise.resolve(null),
+    prisma.studentNote.count({ where: { studentId: id } }),
+    viewer.can('audit:read')
+      ? prisma.auditLog.findMany({
+          where: { OR: [{ entityId: id }, { actorId: id }] },
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+          select: { id: true, action: true, createdAt: true, actorId: true, actor: { select: { firstName: true, lastName: true } } },
+        })
+      : Promise.resolve(null),
+  ]);
+  const tally = (rows: { status: string; _count: { _all: number } }[]) => Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
+  const { approvedBy, ...rest } = u;
+  return {
+    user: { ...present(rest as UserRow), isGuest: u.isGuest, failedLoginCount: u.failedLoginCount, lockedUntil: u.lockedUntil && u.lockedUntil > now ? u.lockedUntil : null,
+      tourCompletedAt: u.tourCompletedAt, preferences: { emailOnMessage: u.emailOnMessage, emailReminders: u.emailReminders },
+      rejectionReason: u.rejectionReason, approvedBy: approvedBy ? `${approvedBy.firstName} ${approvedBy.lastName}` : null },
+    sessions: { asStudent: tally(asStudent), asTutor: tally(asTutor) },
+    upcoming: upcoming.map((b) => ({ id: b.id, startsAt: b.startsAt, status: b.status, service: b.service.name, role: b.studentId === id ? 'student' : 'tutor',
+      with: b.studentId === id ? `${b.tutor.firstName} ${b.tutor.lastName}` : `${b.student.firstName} ${b.student.lastName}` })),
+    reports,
+    notes,
+    activity: activity?.map((a) => ({ id: a.id, action: a.action, at: a.createdAt, byThem: a.actorId === id, actor: a.actor ? `${a.actor.firstName} ${a.actor.lastName}` : 'System' })) ?? null,
+  };
+}
+
+/** Clear a lock-out after too many wrong passwords. */
+export async function unlockUser(actorId: string, id: string, ip?: string) {
+  await prisma.user.update({ where: { id }, data: { failedLoginCount: 0, lockedUntil: null } });
+  await audit(actorId, 'user.unlocked', 'user', id, undefined, ip);
+}
+
+export async function resetTour(actorId: string, id: string, ip?: string) {
+  await prisma.user.update({ where: { id }, data: { tourCompletedAt: null } });
+  await audit(actorId, 'user.tour_reset', 'user', id, undefined, ip);
+}
+
+/** Cancel every upcoming session someone is in (e.g. when pausing a tutor). Everyone is emailed. */
+export async function cancelUpcomingFor(actorId: string, id: string, reason: string, ip?: string) {
+  const upcoming = await prisma.booking.findMany({
+    where: { OR: [{ studentId: id }, { tutorId: id }], status: { in: ['PENDING', 'CONFIRMED'] }, endedAt: null, endsAt: { gt: new Date() } },
+    include: bookingInclude,
+  });
+  await cancelMany(actorId, upcoming, reason);
+  await audit(actorId, 'user.sessions_cancelled', 'user', id, { count: upcoming.length, reason }, ip);
+  return { cancelled: upcoming.length };
+}
+
+export type BulkAction = 'suspend' | 'reactivate' | 'send-password-reset' | 'sign-out' | 'unlock' | 'add-role' | 'remove-role';
+
+/** Apply one action to many people; each person succeeds or fails on their own. */
+export async function bulk(actorId: string, ids: string[], action: BulkAction, roleKey?: string, ip?: string) {
+  const done: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  for (const id of ids) {
+    try {
+      if (action === 'suspend') await suspendUser(actorId, id, ip);
+      else if (action === 'reactivate') await reactivateUser(actorId, id, ip);
+      else if (action === 'send-password-reset') await sendPasswordReset(actorId, id, ip);
+      else if (action === 'sign-out') await signOutEverywhere(actorId, id, ip);
+      else if (action === 'unlock') await unlockUser(actorId, id, ip);
+      else {
+        if (!roleKey) throw BadRequest('Choose a role');
+        const current = await prisma.userRole.findMany({ where: { userId: id }, select: { role: { select: { key: true } } } });
+        const keys = new Set(current.map((r) => r.role.key));
+        if (action === 'add-role') keys.add(roleKey);
+        else keys.delete(roleKey);
+        if (!keys.size) throw BadRequest('Everyone needs at least one role');
+        if (id === actorId && action === 'remove-role' && roleKey === 'admin') throw BadRequest("You can't remove your own admin role");
+        await setUserRoles(actorId, id, [...keys]);
+      }
+      done.push(id);
+    } catch (e) {
+      failed.push({ id, error: e instanceof Error ? e.message : 'Failed' });
+    }
+  }
+  return { done: done.length, failed };
+}
+
 export async function reactivateUser(actorId: string, id: string, ip?: string) {
   await requireStatus(id, ['SUSPENDED']);
   await prisma.user.update({ where: { id }, data: { status: 'ACTIVE' } });

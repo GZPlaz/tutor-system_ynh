@@ -28,7 +28,7 @@ export const BrandingSchema = z.object({
   /** Attention colour: badges for things waiting on someone. */
   accentColor: Hex,
   /** Font pairing (see client/src/lib/branding.ts). "system" loads no web fonts. */
-  font: z.enum(['studio', 'classic', 'friendly', 'system']),
+  font: z.enum(['modern', 'studio', 'classic', 'friendly', 'system']),
   /** Corner style for buttons, fields and panels. */
   corners: z.enum(['rounded', 'soft', 'square']),
   /** Colour scheme: follow the visitor's device, or force light/dark. */
@@ -48,7 +48,7 @@ export const DEFAULT_BRANDING: Branding = {
   highlights: ['Live sessions on Google Meet', 'Pick times that suit you', 'All your materials in one place'],
   primaryColor: '#1F3A5F',
   accentColor: '#B7791F',
-  font: 'classic',
+  font: 'modern',
   corners: 'soft',
   theme: 'auto',
   supportEmail: '',

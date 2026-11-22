@@ -228,6 +228,15 @@ export const templates = {
     text: `${d.tutorName} wrote a recap of your ${d.serviceName} session (${d.when}):\n\n${d.recap}\n\n${d.manageUrl ? String(d.manageUrl) : link('/sessions?view=past')}`,
   }),
 
+  admin_new_report: (d, b) => ({
+    subject: `New report about ${d.tutorName}`,
+    html: layout(b, 'A tutor has been reported',
+      p(`<strong>${esc(d.reporterName)}</strong> reported <strong>${esc(d.tutorName)}</strong> (${esc(d.category)}).`) +
+      `<blockquote style="margin:6px 0 18px;padding:12px 16px;border-left:3px solid #C3CCC7;background:#F6F7F4;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(d.preview)}</blockquote>`,
+      { label: 'Review the report', url: link('/admin/reports') }),
+    text: `${d.reporterName} reported ${d.tutorName} (${d.category}):\n\n${d.preview}\n\nReview: ${link('/admin/reports')}`,
+  }),
+
   meeting_link_posted: (d, b) => ({
     subject: `Your Meet link for ${d.serviceName}`,
     html: layout(b, 'Your Google Meet link is ready',

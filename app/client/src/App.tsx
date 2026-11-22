@@ -26,6 +26,9 @@ import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
 import { PacketsPage } from './pages/PacketsPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { InsightsPage } from './pages/admin/InsightsPage';
+import { ReportsPage } from './pages/admin/ReportsPage';
+import { PersonPage } from './pages/admin/PersonPage';
+import { StudentProfilePage, StudentsPage } from './pages/StudentsPage';
 import { Empty } from './components/ui';
 
 const gate = (any: string[], element: ReactElement) => <Route element={<RequirePermission any={any} />}>{element}</Route>;
@@ -57,7 +60,11 @@ export default function App() {
           {gate(['availability:manage_own', 'availability:manage_any'], <Route path="/availability" element={<AvailabilityPage />} />)}
           {gate(['resources:read_assigned', 'resources:create', 'resources:manage_any'], <Route path="/resources" element={<ResourcesPage />} />)}
           {gate(['groups:manage'], <Route path="/classes" element={<ClassesPage />} />)}
-          {gate(['users:read', 'users:approve'], <Route path="/admin/people" element={<PeoplePage />} />)}
+          {gate(['users:manage', 'users:approve'], <Route path="/admin/people" element={<PeoplePage />} />)}
+          {gate(['users:manage', 'users:approve'], <Route path="/admin/people/:id" element={<PersonPage />} />)}
+          {gate(['safety:manage'], <Route path="/admin/reports" element={<ReportsPage />} />)}
+          {gate(['students:read_notes'], <Route path="/students" element={<StudentsPage />} />)}
+          {gate(['students:read_notes'], <Route path="/students/:id" element={<StudentProfilePage />} />)}
           {gate(['services:manage'], <Route path="/admin/services" element={<ServicesPage />} />)}
           {gate(['packets:manage'], <Route path="/admin/packets" element={<PacketsAdminPage />} />)}
           {gate(['roles:manage'], <Route path="/admin/roles" element={<RolesPage />} />)}

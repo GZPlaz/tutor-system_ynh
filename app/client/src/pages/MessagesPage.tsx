@@ -16,6 +16,7 @@ import { Icon } from '../components/Icon';
 import { Avatar, Button, Empty, ErrorText, Loading, Modal, PageHeader, Pill, errorMessage, useApi, useToast } from '../components/ui';
 import { api } from '../lib/api';
 import { refreshMessageSummary } from '../lib/messages';
+import { ReportDialog } from '../components/ReportDialog';
 import { fmtDate, fmtDateTime, fmtTime } from '../lib/time';
 import type { Contact, ConversationSummary, Thread, ThreadMessage } from '../lib/types';
 
@@ -153,6 +154,7 @@ function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: C
   const [older, setOlder] = useState<ThreadMessage[]>([]);
   const [hasMoreOlder, setHasMoreOlder] = useState<boolean | null>(null);
   const [replyTo, setReplyTo] = useState<ThreadMessage | null>(null);
+  const [reporting, setReporting] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -240,6 +242,7 @@ function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: C
           <small>{other ? (other.relation === 'tutor' ? 'Your tutor' : 'Your student') : `Student ${c.student.name} · Tutor ${c.tutor.name}`}</small>
         </div>
         {summary && summary.openQuestions > 0 && c.mySide === 'student' && <Pill tone="attention">{summary.openQuestions} question{summary.openQuestions > 1 ? 's' : ''} to answer</Pill>}
+        {other?.relation === 'tutor' && <button className="link-btn subtle-link" onClick={() => setReporting(true)}>Report</button>}
       </header>
 
       <div className="thread-body" ref={scroller}>
@@ -309,6 +312,7 @@ function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: C
       ) : (
         <p className="thread-note">You're viewing this conversation as an administrator. You can't send messages in it.</p>
       )}
+      {reporting && other && <ReportDialog tutor={{ id: other.id, name: other.name }} onClose={() => setReporting(false)} onDone={() => { setReporting(false); toast('Report sent to the team. Thank you for telling us.'); }} />}
     </div>
   );
 }

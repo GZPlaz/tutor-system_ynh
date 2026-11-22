@@ -38,6 +38,39 @@ People can also, from their own **Profile**:
 - turn message emails and session reminders on or off (booking and account emails always send)
 - email themselves a reset link if they've forgotten their current password
 
+### Menu layout
+
+The menu only shows what each person can use:
+
+| Who | Menu |
+|---|---|
+| Students | Home, Sessions, Book a session, Messages, Resources, Free packets |
+| Tutors | the above, plus **Teaching**: My hours, Students, Classes |
+| Admins | **Admin**: People, Reports, Subjects, Study packets, Insights, Settings |
+
+**Settings** holds General, Branding, Roles & permissions and the Activity log as tabs. On session cards, less common actions (add to calendar, cancel, report, change the Meet link) are under **More**.
+
+### Reports about tutors (Admin → Reports)
+
+- **Filing a report:** anyone signed in can report a tutor, from a session's **More → Report a problem** or from a conversation with a tutor. They choose a category (safety, behaviour, no-show, teaching quality, other) and describe what happened.
+- **Notification:** admins with `safety:manage` are emailed about each new report.
+- **Privacy:** reporters' names are visible to admins only. The tutor is never told who reported them.
+- **Reviewing:** each report has a status (open, reviewing, resolved, dismissed) and an internal admin note, and links to the tutor's account page. There you can pause them or cancel their upcoming sessions.
+- **Abuse limit:** each person can file up to 5 reports per hour.
+
+### Notes on students (Teaching → Students)
+
+- **Writing notes:** tutors can write notes about students they have taught (admins can write about anyone). Each note is either **Tutors only** or **Also visible to the student**.
+- **Reading notes:** every tutor can open any student's profile and read all notes, so whoever teaches them next knows the background.
+- **What students see:** only the shared notes, under "Notes from your tutors" on their home page.
+- **Editing:** authors can edit or delete their own notes; admins can delete any. Changes are recorded in the activity log.
+
+### A person's account page (Admin → People → Open)
+
+- **What it shows:** account details, roles, sessions as a student and as a tutor, upcoming sessions, reports about them, and their recent activity.
+- **Actions:** edit details, reset password, change roles, sign out everywhere, show the tour again, unlock after too many wrong passwords, cancel all upcoming sessions (everyone is emailed), pause or reactivate, and delete.
+- **Bulk actions:** on **People → Everyone**, tick several people (or "select all on this page") to send reset links, sign them out, unlock, pause, reactivate, or add or remove a role in one go. Each person succeeds or is skipped on their own, with the reason shown.
+
 ### Insights and exports (Admin → Insights)
 
 - **What it shows:** sessions completed, upcoming, no-show and cancellation rates, average rating, students taught, new accounts, messages, a weekly chart, and breakdowns by subject and tutor, plus the latest written feedback. You can pick 4 weeks, 12 weeks or 6 months.

@@ -3,7 +3,7 @@
  * Invite tutors/staff, change roles, pause or delete accounts.
  */
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { Icon } from '../../components/Icon';
 import { Avatar, Button, ConfirmDialog, Empty, ErrorText, Loading, Modal, PageHeader, Pill, Segmented, useAction, useApi, useToast, type Paged, type Tone } from '../../components/ui';
@@ -34,6 +34,8 @@ export function PeoplePage() {
   const [role, setRole] = useState('');
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkRole, setBulkRole] = useState('');
 
   const pending = useApi<Paged<UserRow>>('/users?status=PENDING&pageSize=100');
   const qs = new URLSearchParams({ page: String(page), pageSize: '25' });
@@ -44,6 +46,17 @@ export function PeoplePage() {
   const roleOptions = roles.data?.map((r) => ({ key: r.key, name: r.name })) ?? FALLBACK_ROLES;
   const pages = Math.max(1, Math.ceil((everyone.data?.total ?? 0) / 25));
   const reloadAll = () => { void pending.reload(); void everyone.reload(); };
+
+  const toggle = (id: string) => setSelected((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const pageIds = everyone.data?.items.filter((u) => u.id !== me?.id).map((u) => u.id) ?? [];
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const [runBulk, bulkBusy, bulkError] = useAction(async (action: string, label: string) => {
+    if ((action === 'add-role' || action === 'remove-role') && !bulkRole) throw new Error('Choose a role first.');
+    const r = await api<{ done: number; failed: { id: string; error: string }[] }>('/users/bulk', { method: 'POST', json: { ids: [...selected], action, roleKey: bulkRole || undefined } });
+    toast(`${label}: ${r.done} done${r.failed.length ? `, ${r.failed.length} skipped (${r.failed[0]?.error})` : ''}`);
+    setSelected(new Set());
+    reloadAll();
+  });
 
   const [act, busy, actError] = useAction(async (u: UserRow, action: 'approve' | 'reactivate') => {
     await api(`/users/${u.id}/${action}`, { method: 'POST', json: {} });
@@ -108,30 +121,51 @@ export function PeoplePage() {
             <Empty icon="search" title="No one matches">Try a different name, email or role.</Empty>
           ) : (
             <ul className="rows">
+              {can('users:manage') && (
+                <li className="row-item rows-head">
+                  <label className="check"><input type="checkbox" checked={allOnPage} onChange={() => setSelected(allOnPage ? new Set() : new Set(pageIds))} aria-label="Select everyone on this page" /> Select all on this page</label>
+                </li>
+              )}
               {everyone.data.items.map((u) => (
-                <li key={u.id} className="row-item">
+                <li key={u.id} className={`row-item ${selected.has(u.id) ? 'is-selected' : ''}`}>
+                  {can('users:manage') && (
+                    <input type="checkbox" className="row-check" checked={selected.has(u.id)} disabled={u.id === me?.id} onChange={() => toggle(u.id)} aria-label={`Select ${fullName(u)}`} />
+                  )}
                   <Avatar name={fullName(u)} />
                   <span className="row-text">
-                    <strong>{fullName(u)} {u.id === me?.id && <span className="muted">(you)</span>}</strong>
+                    <Link to={`/admin/people/${u.id}`} className="row-link"><strong>{fullName(u)} {u.id === me?.id && <span className="muted">(you)</span>}</strong></Link>
                     <small>{u.email}</small>
                   </span>
                   <span className="row-meta">{u.roles.map((r) => r.name).join(', ')}</span>
                   <span className="row-meta"><Pill tone={STATUS[u.status].tone}>{STATUS[u.status].label}</Pill></span>
                   <span className="row-actions">
                     {u.status === 'PENDING' && can('users:approve') && <Button busy={busy} onClick={() => act(u, 'approve')}>Approve</Button>}
-                    {can('users:manage') && <Button variant="ghost" onClick={() => setDialog({ kind: 'manage', user: u })}>Manage</Button>}
-                    {can('users:manage') && <Button variant="ghost" onClick={() => setDialog({ kind: 'roles', user: u })}>Roles</Button>}
-                    {can('users:manage') && u.status === 'ACTIVE' && u.id !== me?.id && <Button variant="ghost" onClick={() => setDialog({ kind: 'suspend', user: u })}>Pause</Button>}
-                    {can('users:manage') && u.status === 'SUSPENDED' && <Button variant="ghost" busy={busy} onClick={() => act(u, 'reactivate')}>Reactivate</Button>}
-                    {can('users:delete') && u.id !== me?.id && (
-                      <button className="icon-btn danger" aria-label={`Delete ${fullName(u)}`} title="Delete account" onClick={() => setDialog({ kind: 'delete', user: u })}>
-                        <Icon name="trash" size={18} />
-                      </button>
-                    )}
+                    <Link className="btn ghost" to={`/admin/people/${u.id}`}>Open</Link>
                   </span>
                 </li>
               ))}
             </ul>
+          )}
+          {selected.size > 0 && (
+            <div className="bulk-bar" role="region" aria-label="Bulk actions">
+              <strong>{selected.size} selected</strong>
+              <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('send-password-reset', 'Reset links sent')}>Send reset link</Button>
+              <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('sign-out', 'Signed out')}>Sign out everywhere</Button>
+              <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('unlock', 'Unlocked')}>Unlock</Button>
+              <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('suspend', 'Paused')}>Pause</Button>
+              <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('reactivate', 'Reactivated')}>Reactivate</Button>
+              <span className="bulk-roles">
+                <select value={bulkRole} onChange={(e) => setBulkRole(e.target.value)} aria-label="Role for bulk change">
+                  <option value="">Role…</option>
+                  {roleOptions.map((r) => <option key={r.key} value={r.key}>{r.name}</option>)}
+                </select>
+                <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('add-role', 'Role added')}>Add</Button>
+                <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('remove-role', 'Role removed')}>Remove</Button>
+              </span>
+              <span className="spacer" />
+              <button className="link-btn" onClick={() => setSelected(new Set())}>Clear</button>
+              <ErrorText>{bulkError}</ErrorText>
+            </div>
           )}
           {pages > 1 && (
             <div className="pager">
@@ -220,7 +254,7 @@ function InviteDialog({ roles, onClose, onDone }: { roles: { key: string; name: 
   );
 }
 
-function RolesDialog({ user, roles, onClose, onDone }: { user: UserRow; roles: { key: string; name: string }[]; onClose: () => void; onDone: () => void }) {
+export function RolesDialog({ user, roles, onClose, onDone }: { user: UserRow; roles: { key: string; name: string }[]; onClose: () => void; onDone: () => void }) {
   const [value, setValue] = useState(user.roles.map((r) => r.key));
   const [save, busy, error] = useAction(async () => {
     await api(`/users/${user.id}/roles`, { method: 'PUT', json: { roles: value } });
@@ -235,7 +269,7 @@ function RolesDialog({ user, roles, onClose, onDone }: { user: UserRow; roles: {
   );
 }
 
-function ManageDialog({ user, isMe, onClose, onSaved }: { user: UserRow; isMe: boolean; onClose: () => void; onSaved: (msg: string) => void }) {
+export function ManageDialog({ user, isMe, onClose, onSaved }: { user: UserRow; isMe: boolean; onClose: () => void; onSaved: (msg: string) => void }) {
   const [form, setForm] = useState({ firstName: user.firstName, lastName: user.lastName, email: user.email, timezone: user.timezone });
   const [save, saving, saveErr] = useAction(async () => {
     const changed = Object.fromEntries(Object.entries(form).filter(([k, v]) => v.trim() !== String(user[k as keyof UserRow] ?? '')));

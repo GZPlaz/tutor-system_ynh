@@ -14,7 +14,7 @@ export interface Branding {
   highlights: string[];
   primaryColor: string;
   accentColor: string;
-  font: 'studio' | 'classic' | 'friendly' | 'system';
+  font: 'modern' | 'studio' | 'classic' | 'friendly' | 'system';
   corners: 'rounded' | 'soft' | 'square';
   theme: 'auto' | 'light' | 'dark';
   supportEmail: string;
@@ -29,7 +29,7 @@ export const DEFAULT_BRANDING: Branding = {
   highlights: ['Live sessions on Google Meet', 'Pick times that suit you', 'All your materials in one place'],
   primaryColor: '#1F3A5F',
   accentColor: '#B7791F',
-  font: 'classic',
+  font: 'modern',
   corners: 'soft',
   theme: 'auto',
   supportEmail: '',
@@ -39,6 +39,13 @@ export const DEFAULT_BRANDING: Branding = {
 
 /** Font pairings offered in the Branding page. */
 export const FONTS: Record<Branding['font'], { label: string; description: string; display: string; body: string; href: string | null }> = {
+  modern: {
+    label: 'Modern',
+    description: 'Clean and professional, like most business software',
+    display: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    body: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+  },
   studio: {
     label: 'Studio',
     description: 'Characterful headings, very readable text',
@@ -71,7 +78,7 @@ export const FONTS: Record<Branding['font'], { label: string; description: strin
 
 export const CORNERS: Record<Branding['corners'], { label: string; sm: string; md: string; lg: string }> = {
   rounded: { label: 'Rounded', sm: '8px', md: '12px', lg: '20px' },
-  soft: { label: 'Soft', sm: '4px', md: '6px', lg: '8px' },
+  soft: { label: 'Soft', sm: '6px', md: '8px', lg: '12px' },
   square: { label: 'Square', sm: '2px', md: '2px', lg: '3px' },
 };
 
@@ -105,7 +112,7 @@ export const inkOn = (bg: string) => (contrast(bg, '#FFFFFF') >= contrast(bg, '#
 export function brandVars(b: Pick<Branding, 'primaryColor' | 'accentColor' | 'font' | 'corners'>, dark: boolean): Record<string, string> {
   const P = b.primaryColor;
   const A = b.accentColor;
-  const bg = dark ? '#16181B' : '#FFFFFF';
+  const bg = dark ? '#111317' : '#F7F8FA';
   // Make sure brand-coloured text stays readable on the page background.
   let text = P;
   for (let i = 0; i < 6 && contrast(text, dark ? '#1D2024' : '#FFFFFF') < 4.5; i++) text = mix(text, dark ? '#FFFFFF' : '#000000', 0.18);

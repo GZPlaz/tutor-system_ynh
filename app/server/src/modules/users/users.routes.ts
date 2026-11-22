@@ -52,6 +52,40 @@ usersRouter.get('/', requirePermission(P.USERS_READ), validate({ query: ListQuer
   res.json(await users.listUsers(parsed(req, 'query', ListQuery)));
 });
 
+const BulkBody = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  action: z.enum(['suspend', 'reactivate', 'send-password-reset', 'sign-out', 'unlock', 'add-role', 'remove-role']),
+  roleKey: z.string().min(1).max(64).optional(),
+});
+usersRouter.post('/bulk', requirePermission(P.USERS_MANAGE), validate({ body: BulkBody }), async (req, res) => {
+  const { ids, action, roleKey } = parsed(req, 'body', BulkBody);
+  res.json(await users.bulk(authOf(req).userId, ids, action, roleKey, req.ip));
+});
+
+usersRouter.get('/:id/overview', requirePermission(P.USERS_READ), validate({ params: IdParams }), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(await users.userOverview(authOf(req), parsed(req, 'params', IdParams).id));
+});
+
+usersRouter.post('/:id/unlock', requirePermission(P.USERS_MANAGE), validate({ params: IdParams }), async (req, res) => {
+  await users.unlockUser(authOf(req).userId, parsed(req, 'params', IdParams).id, req.ip);
+  res.status(204).end();
+});
+
+usersRouter.post('/:id/reset-tour', requirePermission(P.USERS_MANAGE), validate({ params: IdParams }), async (req, res) => {
+  await users.resetTour(authOf(req).userId, parsed(req, 'params', IdParams).id, req.ip);
+  res.status(204).end();
+});
+
+usersRouter.post(
+  '/:id/cancel-upcoming',
+  requirePermission(P.BOOKINGS_MANAGE_ANY),
+  validate({ params: IdParams, body: z.object({ reason: z.string().trim().min(3).max(500) }) }),
+  async (req, res) => {
+    res.json(await users.cancelUpcomingFor(authOf(req).userId, parsed(req, 'params', IdParams).id, (req.valid.body as { reason: string }).reason, req.ip));
+  },
+);
+
 usersRouter.get('/:id', requirePermission(P.USERS_READ), validate({ params: IdParams }), async (req, res) => {
   res.json(await users.getUser(parsed(req, 'params', IdParams).id));
 });
