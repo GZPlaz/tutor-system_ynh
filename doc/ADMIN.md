@@ -54,6 +54,10 @@ The menu only shows what each person can use:
 
 **Calendar** in the menu shows sessions by month, or as a list (the default on phones), in each person's time zone. Students and tutors see their own sessions. Admins can switch between **Mine** and **Everyone** and filter by tutor. Clicking a session shows the details and the Join button. Requested, confirmed, completed and cancelled sessions each look different (a key is under the calendar).
 
+### Booking on someone's behalf
+
+On **Book a session**, admins (permission `bookings:manage_any`) see **Booking for** at the top. Search for a person by name or email, then pick the subject, tutor and time as usual. These bookings are confirmed immediately (no waiting for the tutor), and both the student and the tutor are emailed. **Book for yourself instead** switches back.
+
 ### Emailing people and setting passwords
 
 - **Email from the portal:** on a person's page, **Send an email**; or on **People → Everyone**, tick several people and choose **Email**. Each person gets their own copy, sent from the site's address with your name at the bottom. Permission: `email:send` (admins). Every send is recorded in the activity log.

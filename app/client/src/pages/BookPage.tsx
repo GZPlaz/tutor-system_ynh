@@ -12,10 +12,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
-import { Button, Empty, ErrorText, Loading, PageHeader, useAction, useApi } from '../components/ui';
+import { Button, Empty, ErrorText, Loading, PageHeader, useAction, useApi, type Paged } from '../components/ui';
 import { api } from '../lib/api';
 import { browserTimeZone, fmtTime } from '../lib/time';
-import type { PublicConfig, Service } from '../lib/types';
+import type { PublicConfig, Service, UserRow } from '../lib/types';
 
 interface Slot { startsAt: string; endsAt: string }
 interface TutorSlots { tutor: { id: string; name: string }; slots: Slot[] }
@@ -38,6 +38,12 @@ export function BookPage() {
   const [pick, setPick] = useState<Pick | null>(null);
   const [notes, setNotes] = useState('');
   const [sent, setSent] = useState(false);
+  // Staff can book on someone else's behalf; those bookings are confirmed straight away.
+  const { can } = useAuth();
+  const staff = !guest && can('bookings:manage_any');
+  const [forStudent, setForStudent] = useState<{ id: string; name: string } | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const studentResults = useApi<Paged<UserRow>>(staff && studentSearch.trim().length >= 2 ? `/users?${new URLSearchParams({ status: 'ACTIVE', search: studentSearch.trim(), pageSize: '8' })}` : null);
   const [who, setWho] = useState({ firstName: '', lastName: '', email: '', website: '' });
 
   const range = useMemo(() => {
@@ -101,7 +107,7 @@ export function BookPage() {
       }
       await api('/scheduling/bookings', {
         method: 'POST',
-        json: { serviceId: service.id, tutorId: pick.tutorId, startsAt: pick.slot.startsAt, notes: notes.trim() || undefined },
+        json: { serviceId: service.id, tutorId: pick.tutorId, startsAt: pick.slot.startsAt, notes: notes.trim() || undefined, studentId: forStudent?.id },
       });
       setSent(true);
     } catch (e) {
@@ -119,11 +125,15 @@ export function BookPage() {
       <div className={guest ? '' : 'page narrow'}>
         <div className="done panel">
           <div className="done-icon"><Icon name="check" size={28} /></div>
-          <h1>Request sent</h1>
+          <h1>{staff ? 'Session booked' : 'Request sent'}</h1>
           <p>
             {service.name} with {pick.tutorName}, {fmtDay(new Date(pick.slot.startsAt), { weekday: 'long', month: 'long', day: 'numeric' })} at {fmtTime(pick.slot.startsAt, tz)}.
           </p>
-          <p className="muted">The time is held for you. We'll email you as soon as {pick.tutorName.split(' ')[0]} confirms.</p>
+          {staff ? (
+            <p className="muted">Booked {forStudent ? `for ${forStudent.name}` : 'for you'} and confirmed straight away. {forStudent ? `${forStudent.name.split(' ')[0]} and ${pick.tutorName.split(' ')[0]} were` : `${pick.tutorName.split(' ')[0]} was`} emailed.</p>
+          ) : (
+            <p className="muted">The time is held for you. We'll email you as soon as {pick.tutorName.split(' ')[0]} confirms.</p>
+          )}
           {guest && <p>We sent a confirmation to <strong>{who.email.trim()}</strong>. It has a private link where you can see this booking, find the Google Meet link and cancel if you need to. If you don't see it, check your spam folder.</p>}
           <div className="button-row">
             {!guest && <Link to="/sessions" className="btn primary">See my sessions</Link>}
@@ -137,6 +147,32 @@ export function BookPage() {
   return (
     <div className={guest ? '' : 'page narrow'}>
       <PageHeader title="Book a session" description={`Times are shown in ${tz}.`} />
+      {staff && (
+        <section className="panel book-for">
+          <div className="book-for-head">
+            <span><strong>Booking for</strong> {forStudent ? forStudent.name : 'yourself'}</span>
+            {forStudent && <button className="link-btn" onClick={() => setForStudent(null)}>Book for yourself instead</button>}
+          </div>
+          {!forStudent && (
+            <>
+              <label className="search-field">
+                <Icon name="search" size={18} />
+                <input type="search" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} placeholder="Book for someone else: search by name or email" aria-label="Find a person to book for" />
+              </label>
+              {studentResults.data && (
+                <ul className="pick-list">
+                  {studentResults.data.items.length ? studentResults.data.items.map((u) => (
+                    <li key={u.id}><button className="choice" onClick={() => { setForStudent({ id: u.id, name: `${u.firstName} ${u.lastName}` }); setStudentSearch(''); }}>
+                      <span className="choice-text"><strong>{u.firstName} {u.lastName}</strong><span>{u.email}</span></span>
+                    </button></li>
+                  )) : <li className="muted">Nobody matches.</li>}
+                </ul>
+              )}
+            </>
+          )}
+          <small className="hint">Sessions you book are confirmed immediately, and everyone involved is emailed.</small>
+        </section>
+      )}
       {guest && (
         <p className="guest-note">
           <Icon name="user" size={18} />
