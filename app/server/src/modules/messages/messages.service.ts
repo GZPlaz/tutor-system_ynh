@@ -106,10 +106,15 @@ const conversationInclude = {
   _count: { select: { messages: { where: { kind: 'QUESTION', answeredAt: null } } } },
 } satisfies Prisma.ConversationInclude;
 
-export async function listConversations(auth: Auth, scope: 'mine' | 'all') {
+export async function listConversations(auth: Auth, scope: 'mine' | 'all', archived = false) {
   if (scope === 'all' && !auth.can(P.MESSAGES_READ_ANY)) throw Forbidden();
+  const me = auth.userId;
   const where: Prisma.ConversationWhereInput =
-    scope === 'all' ? { messages: { some: {} } } : { OR: [{ studentId: auth.userId }, { tutorId: auth.userId }] };
+    scope === 'all'
+      ? { messages: { some: {} } }
+      : archived
+        ? { OR: [{ studentId: me, studentArchivedAt: { not: null } }, { tutorId: me, tutorArchivedAt: { not: null } }] }
+        : { OR: [{ studentId: me, studentArchivedAt: null }, { tutorId: me, tutorArchivedAt: null }] };
   const [rows, unread] = await Promise.all([
     prisma.conversation.findMany({ where, include: conversationInclude, orderBy: { lastMessageAt: 'desc' }, take: 200 }),
     unreadByConversation(auth.userId),
@@ -127,6 +132,7 @@ export async function listConversations(auth: Auth, scope: 'mine' | 'all') {
       lastMessage: last ? { preview: preview(last.body, 120), at: last.createdAt, fromMe: last.senderId === auth.userId, kind: last.kind } : null,
       lastMessageAt: c.lastMessageAt,
       unread: unread.get(c.id) ?? 0,
+      archived: side === 'student' ? !!c.studentArchivedAt : side === 'tutor' ? !!c.tutorArchivedAt : false,
       openQuestions: c._count.messages,
     };
   });
@@ -243,7 +249,7 @@ export async function sendMessage(auth: Auth, conversationId: string, input: { b
     if (input.replyToId) await tx.message.updateMany({ where: { id: input.replyToId, kind: 'QUESTION', answeredAt: null }, data: { answeredAt: now } });
     await tx.conversation.update({
       where: { id: conversationId },
-      data: { lastMessageAt: now, ...(me === 'student' ? { studentLastReadAt: now } : { tutorLastReadAt: now }) },
+      data: { lastMessageAt: now, studentArchivedAt: null, tutorArchivedAt: null, ...(me === 'student' ? { studentLastReadAt: now } : { tutorLastReadAt: now }) },
     });
     await notify(c, otherSide(me), recipient, 'MESSAGE', 'message_received', { fromName: name(sender), preview: preview(input.body), conversationId }, tx);
     return m;
@@ -268,7 +274,7 @@ export async function askQuestion(auth: Auth, bookingId: string, body: string) {
       data: { conversationId: conv.id, senderId: auth.userId, kind: 'QUESTION', body, bookingId },
       select: { id: true, conversationId: true },
     });
-    await tx.conversation.update({ where: { id: conv.id }, data: { lastMessageAt: now, tutorLastReadAt: now } });
+    await tx.conversation.update({ where: { id: conv.id }, data: { lastMessageAt: now, tutorLastReadAt: now, studentArchivedAt: null, tutorArchivedAt: null } });
     await notify(conv, 'student', b.student, 'QUESTION', 'session_question', {
       tutorName: name(b.tutor),
       serviceName: b.service.name,
@@ -307,4 +313,19 @@ export async function unreadSummary(auth: Auth) {
       startsAt: q.booking?.startsAt ?? null,
     })),
   };
+}
+
+/** Archive (close) or reopen a thread for yourself. The other person is not affected. */
+export async function setArchived(auth: Auth, conversationId: string, archived: boolean) {
+  const { side } = await loadConversation(auth, conversationId, 'write');
+  const at = archived ? new Date() : null;
+  await prisma.conversation.update({ where: { id: conversationId }, data: side === 'student' ? { studentArchivedAt: at } : { tutorArchivedAt: at } });
+}
+
+/** Permanently delete a thread and its messages (messages:delete). Logged with who was in it. */
+export async function deleteConversation(auth: Auth, conversationId: string) {
+  const c = await prisma.conversation.findUnique({ where: { id: conversationId }, select: { studentId: true, tutorId: true, _count: { select: { messages: true } } } });
+  if (!c) throw NotFound('Conversation');
+  await prisma.conversation.delete({ where: { id: conversationId } });
+  await audit(auth.userId, 'messages.conversation_deleted', 'conversation', conversationId, { student: c.studentId, tutor: c.tutorId, messages: c._count.messages });
 }

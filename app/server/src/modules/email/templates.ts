@@ -237,6 +237,24 @@ export const templates = {
     text: `${d.reporterName} reported ${d.tutorName} (${d.category}):\n\n${d.preview}\n\nReview: ${link('/admin/reports')}`,
   }),
 
+  admin_message: (d, b) => ({
+    subject: String(d.subject),
+    html: layout(b, String(d.subject),
+      `<div style="font-size:15px;line-height:1.6;white-space:pre-wrap;margin:0 0 14px">${esc(d.body)}</div>` +
+      p(`<span style="color:#5A6A71;font-size:13px">Sent by ${esc(d.senderName)} from ${esc(b.siteName)}.</span>`),
+      { label: 'Open the site', url: link('/') }),
+    text: `${d.body}\n\n— ${d.senderName}, ${b.siteName}`,
+  }),
+
+  password_set_by_admin: (d, b) => ({
+    subject: `Your ${b.siteName} password was changed`,
+    html: layout(b, 'Your password was changed',
+      p(`Hi ${esc(d.firstName)}, an administrator (${esc(d.adminName)}) set a new password for your account and signed you out on every device.`) +
+      p('They will tell you the new password. Please change it to one only you know from your profile after signing in. If you did not expect this, contact the team.'),
+      { label: 'Sign in', url: link('/login') }),
+    text: `An administrator (${d.adminName}) set a new password for your account. Sign in: ${link('/login')}`,
+  }),
+
   meeting_link_posted: (d, b) => ({
     subject: `Your Meet link for ${d.serviceName}`,
     html: layout(b, 'Your Google Meet link is ready',

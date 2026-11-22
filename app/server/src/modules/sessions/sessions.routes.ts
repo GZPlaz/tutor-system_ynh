@@ -12,7 +12,7 @@ import { authenticate } from '../../middleware/authenticate.js';
 import { authOf, requirePermission } from '../../middleware/authorize.js';
 import { parsed, validate } from '../../middleware/validate.js';
 import { P } from '../rbac/permissions.js';
-import { GOOGLE_MEET_URL, listSessions, postMeetingLink, postNote, sessionCounts } from './sessions.service.js';
+import { calendarRange, GOOGLE_MEET_URL, listSessions, postMeetingLink, postNote, sessionCounts } from './sessions.service.js';
 import { calendarFeed, calendarFeedUrl, saveFeedback, saveRecap, sessionIcs } from './followup.service.js';
 import { rateLimit } from 'express-rate-limit';
 
@@ -106,3 +106,11 @@ publicCalendarRouter.get(
     res.send(ics);
   },
 );
+
+/** Bookings in a date range for the in-portal calendar. scope=all needs bookings:read_any. */
+const CalQuery = z.object({ from: z.coerce.date(), to: z.coerce.date(), scope: z.enum(['mine', 'all']).default('mine'), tutorId: z.string().uuid().optional() });
+sessionsRouter.get('/calendar/range', requirePermission(P.SESSIONS_VIEW_FEED), validate({ query: CalQuery }), async (req, res) => {
+  const q = parsed(req, 'query', CalQuery);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(await calendarRange(authOf(req), q));
+});

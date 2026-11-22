@@ -14,7 +14,7 @@
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
-import { Conflict, Forbidden } from '../../lib/errors.js';
+import { BadRequest, Conflict, Forbidden } from '../../lib/errors.js';
 import { addMinutes, formatForUser } from '../../lib/time.js';
 import { audit } from '../audit/audit.service.js';
 import { enqueueEmail } from '../email/email.service.js';
@@ -135,4 +135,33 @@ export async function postNote(auth: Auth, bookingId: string, message: string) {
   const b = await getBookingForParticipant(auth, bookingId);
   if (b.tutorId !== auth.userId && b.studentId !== auth.userId && !auth.can(P.BOOKINGS_MANAGE_ANY)) throw Forbidden();
   return prisma.sessionFeedPost.create({ data: { bookingId: b.id, authorId: auth.userId, kind: 'NOTE', message } });
+}
+
+/** Bookings overlapping [from, to] for the calendar view (max 93 days). */
+export async function calendarRange(auth: Auth, q: { from: Date; to: Date; scope: 'mine' | 'all'; tutorId?: string }) {
+  if (q.to.getTime() - q.from.getTime() > 93 * 864e5 || q.to <= q.from) throw BadRequest('Choose a range of up to three months');
+  const all = q.scope === 'all' && (auth.can(P.BOOKINGS_READ_ANY) || auth.can(P.BOOKINGS_MANAGE_ANY));
+  if (q.scope === 'all' && !all) throw Forbidden();
+  const rows = await prisma.booking.findMany({
+    where: {
+      startsAt: { lt: q.to },
+      endsAt: { gt: q.from },
+      status: { in: ['PENDING', 'CONFIRMED', 'COMPLETED', 'NO_SHOW', 'CANCELLED'] },
+      ...(all ? (q.tutorId ? { tutorId: q.tutorId } : {}) : { OR: [{ studentId: auth.userId }, { tutorId: auth.userId }] }),
+    },
+    orderBy: { startsAt: 'asc' },
+    take: 2000,
+    select: {
+      id: true, startsAt: true, endsAt: true, status: true, meetingUrl: true, tutorId: true, studentId: true,
+      service: { select: { name: true } },
+      student: { select: { firstName: true, lastName: true } },
+      tutor: { select: { firstName: true, lastName: true } },
+    },
+  });
+  return rows.map((b) => ({
+    id: b.id, startsAt: b.startsAt, endsAt: b.endsAt, status: b.status, service: b.service.name,
+    myRole: b.tutorId === auth.userId ? 'tutor' : b.studentId === auth.userId ? 'student' : 'staff',
+    student: `${b.student.firstName} ${b.student.lastName}`, tutor: `${b.tutor.firstName} ${b.tutor.lastName}`,
+    tutorId: b.tutorId, meetingUrl: b.status === 'CONFIRMED' ? b.meetingUrl : null,
+  }));
 }

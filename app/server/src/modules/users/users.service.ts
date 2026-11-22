@@ -18,6 +18,7 @@ import { createPasswordToken, sendPasswordResetTo } from '../auth/auth.service.j
 import { revokeAllSessions } from '../auth/tokens.js';
 import { bookingInclude, cancelMany } from '../scheduling/scheduling.service.js';
 import { removeFile } from '../resources/storage.js';
+import { hashPassword } from '../../lib/crypto.js';
 
 const userSelect = {
   id: true,
@@ -244,6 +245,28 @@ export async function bulk(actorId: string, ids: string[], action: BulkAction, r
     }
   }
   return { done: done.length, failed };
+}
+
+/** Email one or more people from the portal (plain text, sent through the outbox). */
+export async function emailPeople(actorId: string, ids: string[], subject: string, body: string, ip?: string) {
+  const sender = await prisma.user.findUniqueOrThrow({ where: { id: actorId }, select: { firstName: true, lastName: true } });
+  const people = await prisma.user.findMany({ where: { id: { in: ids }, deletedAt: null }, select: { id: true, email: true } });
+  for (const u of people) await enqueueEmail(u.email, 'admin_message', { subject, body, senderName: `${sender.firstName} ${sender.lastName}` });
+  await audit(actorId, 'user.emailed', 'user', ids.length === 1 ? ids[0]! : null, { recipients: people.length, subject }, ip);
+  return { sent: people.length };
+}
+
+/** Admin sets a password directly. Signs them out everywhere and tells them by email. */
+export async function setPassword(actorId: string, id: string, password: string, notify: boolean, ip?: string) {
+  const u = await prisma.user.findFirst({ where: { id, deletedAt: null, isGuest: false }, select: { email: true, firstName: true } });
+  if (!u) throw NotFound('User');
+  await prisma.user.update({ where: { id }, data: { passwordHash: await hashPassword(password), failedLoginCount: 0, lockedUntil: null } });
+  await revokeAllSessions(id);
+  if (notify) {
+    const admin = await prisma.user.findUniqueOrThrow({ where: { id: actorId }, select: { firstName: true, lastName: true } });
+    await enqueueEmail(u.email, 'password_set_by_admin', { firstName: u.firstName, adminName: `${admin.firstName} ${admin.lastName}` });
+  }
+  await audit(actorId, 'user.password_set_by_admin', 'user', id, { notified: notify }, ip);
 }
 
 export async function reactivateUser(actorId: string, id: string, ip?: string) {

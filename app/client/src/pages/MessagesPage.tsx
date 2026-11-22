@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Icon } from '../components/Icon';
-import { Avatar, Button, Empty, ErrorText, Loading, Modal, PageHeader, Pill, errorMessage, useApi, useToast } from '../components/ui';
+import { Avatar, Button, ConfirmDialog, Empty, ErrorText, Loading, Modal, PageHeader, Pill, errorMessage, useApi, useToast } from '../components/ui';
 import { api } from '../lib/api';
 import { refreshMessageSummary } from '../lib/messages';
 import { ReportDialog } from '../components/ReportDialog';
@@ -40,7 +40,8 @@ export function MessagesPage() {
   const [params, setParams] = useSearchParams();
   const staffView = params.get('scope') === 'all' && can('messages:read_any');
   const selected = params.get('c');
-  const list = useApi<ConversationSummary[]>(`/messages/conversations?scope=${staffView ? 'all' : 'mine'}`);
+  const [archivedView, setArchivedView] = useState(false);
+  const list = useApi<ConversationSummary[]>(`/messages/conversations?scope=${staffView ? 'all' : 'mine'}${!staffView && archivedView ? '&archived=true' : ''}`);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   usePoll(() => void list.reload(), LIST_POLL_MS, true);
@@ -88,9 +89,15 @@ export function MessagesPage() {
 
       <div className={`messenger ${selected ? 'has-selection' : ''}`}>
         <aside className="thread-list" aria-label="Conversations">
+          {!staffView && (
+            <div className="thread-list-tabs" role="tablist" aria-label="Which conversations">
+              <button role="tab" aria-selected={!archivedView} className={!archivedView ? 'active' : ''} onClick={() => { setArchivedView(false); select(null); }}>Inbox</button>
+              <button role="tab" aria-selected={archivedView} className={archivedView ? 'active' : ''} onClick={() => { setArchivedView(true); select(null); }}>Archived</button>
+            </div>
+          )}
           {list.loading && !list.data ? <Loading /> : !items.length ? (
             <div className="thread-list-empty">
-              <p><strong>No conversations yet.</strong></p>
+              <p><strong>{archivedView ? 'Nothing archived.' : 'No conversations yet.'}</strong></p>
               <p className="muted">{staffView ? 'Nobody has sent a message yet.' : 'Start one with "New message", or from a session.'}</p>
             </div>
           ) : (
@@ -122,7 +129,7 @@ export function MessagesPage() {
 
         <section className="thread-pane" aria-label="Conversation">
           {selected ? (
-            <ThreadView key={selected} id={selected} summary={current} onBack={() => select(null)} onChanged={() => void list.reload()} />
+            <ThreadView key={selected} id={selected} summary={current} onBack={() => select(null)} onChanged={() => void list.reload()} onRemoved={() => { select(null); void list.reload(); }} />
           ) : (
             <div className="thread-placeholder">
               <Icon name="message" size={28} />
@@ -147,8 +154,9 @@ function relativeDay(iso: string) {
 
 // ---- one conversation ------------------------------------------------------------------
 
-function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: ConversationSummary | null; onBack: () => void; onChanged: () => void }) {
-  const { user } = useAuth();
+function ThreadView({ id, summary, onBack, onChanged, onRemoved }: { id: string; summary: ConversationSummary | null; onBack: () => void; onChanged: () => void; onRemoved: () => void }) {
+  const { user, can } = useAuth();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const toast = useToast();
   const thread = useApi<Thread>(`/messages/conversations/${id}/messages`);
   const [older, setOlder] = useState<ThreadMessage[]>([]);
@@ -243,6 +251,12 @@ function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: C
         </div>
         {summary && summary.openQuestions > 0 && c.mySide === 'student' && <Pill tone="attention">{summary.openQuestions} question{summary.openQuestions > 1 ? 's' : ''} to answer</Pill>}
         {other?.relation === 'tutor' && <button className="link-btn subtle-link" onClick={() => setReporting(true)}>Report</button>}
+        {c.mySide && (
+          <button className="link-btn subtle-link" onClick={() => void api(`/messages/conversations/${id}/archive`, { method: 'POST', json: { archived: !summary?.archived } })
+            .then(() => { toast(summary?.archived ? 'Moved back to your inbox' : 'Archived. A new message will bring it back.'); onRemoved(); })
+            .catch((e) => toast(errorMessage(e)))}>{summary?.archived ? 'Move to inbox' : 'Archive'}</button>
+        )}
+        {can('messages:delete') && <button className="link-btn danger-link" onClick={() => setConfirmDelete(true)}>Delete</button>}
       </header>
 
       <div className="thread-body" ref={scroller}>
@@ -311,6 +325,12 @@ function ThreadView({ id, summary, onBack, onChanged }: { id: string; summary: C
         )
       ) : (
         <p className="thread-note">You're viewing this conversation as an administrator. You can't send messages in it.</p>
+      )}
+      {confirmDelete && (
+        <ConfirmDialog title="Delete this conversation?" confirmLabel="Delete for everyone" danger onClose={() => setConfirmDelete(false)}
+          onConfirm={async () => { await api(`/messages/conversations/${id}`, { method: 'DELETE' }); toast('Conversation deleted'); onRemoved(); }}>
+          <p>All its messages are permanently removed for both people. This is recorded in the activity log and can't be undone.</p>
+        </ConfirmDialog>
       )}
       {reporting && other && <ReportDialog tutor={{ id: other.id, name: other.name }} onClose={() => setReporting(false)} onDone={() => { setReporting(false); toast('Report sent to the team. Thank you for telling us.'); }} />}
     </div>

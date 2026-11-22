@@ -21,7 +21,7 @@ import { authOf, requirePermission } from '../../middleware/authorize.js';
 import { parsed, validate } from '../../middleware/validate.js';
 import { P } from '../rbac/permissions.js';
 import { setUserRoles } from '../rbac/rbac.service.js';
-import { EmailSchema, TimezoneSchema } from '../auth/auth.schemas.js';
+import { EmailSchema, PasswordSchema, TimezoneSchema } from '../auth/auth.schemas.js';
 import * as users from './users.service.js';
 
 export const usersRouter = Router();
@@ -60,6 +60,23 @@ const BulkBody = z.object({
 usersRouter.post('/bulk', requirePermission(P.USERS_MANAGE), validate({ body: BulkBody }), async (req, res) => {
   const { ids, action, roleKey } = parsed(req, 'body', BulkBody);
   res.json(await users.bulk(authOf(req).userId, ids, action, roleKey, req.ip));
+});
+
+const EmailBody = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+  subject: z.string().trim().min(1).max(150),
+  body: z.string().trim().min(1).max(10_000),
+});
+usersRouter.post('/email', requirePermission(P.EMAIL_SEND), validate({ body: EmailBody }), async (req, res) => {
+  const { ids, subject, body } = parsed(req, 'body', EmailBody);
+  res.json(await users.emailPeople(authOf(req).userId, ids, subject, body, req.ip));
+});
+
+const SetPasswordBody = z.object({ password: PasswordSchema, notify: z.boolean().default(true) });
+usersRouter.post('/:id/set-password', requirePermission(P.USERS_MANAGE), validate({ params: IdParams, body: SetPasswordBody }), async (req, res) => {
+  const { password, notify } = parsed(req, 'body', SetPasswordBody);
+  await users.setPassword(authOf(req).userId, parsed(req, 'params', IdParams).id, password, notify, req.ip);
+  res.status(204).end();
 });
 
 usersRouter.get('/:id/overview', requirePermission(P.USERS_READ), validate({ params: IdParams }), async (req, res) => {

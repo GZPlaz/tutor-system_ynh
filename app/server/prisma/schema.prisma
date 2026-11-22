@@ -584,6 +584,9 @@ model Conversation {
   /// When each side was last emailed about this thread (throttles notifications).
   studentNotifiedAt DateTime? @map("student_notified_at") @db.Timestamptz(3)
   tutorNotifiedAt   DateTime? @map("tutor_notified_at") @db.Timestamptz(3)
+  /// Each side can archive (close) the thread for themselves; a new message reopens it.
+  studentArchivedAt DateTime? @map("student_archived_at") @db.Timestamptz(3)
+  tutorArchivedAt   DateTime? @map("tutor_archived_at") @db.Timestamptz(3)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   student  User      @relation("ConversationStudent", fields: [studentId], references: [id], onDelete: Cascade)

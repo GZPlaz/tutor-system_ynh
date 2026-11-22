@@ -85,6 +85,7 @@ export function Shell() {
       items: [
         { to: '/', label: 'Home', icon: 'home', show: true, end: true },
         { to: '/sessions', label: 'Sessions', icon: 'calendar', show: can('sessions:view_feed'), badge: counts.requests },
+        { to: '/calendar', label: 'Calendar', icon: 'calendarSync', show: can('sessions:view_feed') },
         { to: '/book', label: 'Book a session', icon: 'calendarPlus', show: can('bookings:create') },
         { to: '/messages', label: 'Messages', icon: 'message', show: canAny('messages:send', 'messages:read_any'), badge: messages.unread + messages.openQuestions.length },
         { to: '/resources', label: 'Resources', icon: 'book', show: canAny('resources:read_assigned', 'resources:create', 'resources:manage_any') },

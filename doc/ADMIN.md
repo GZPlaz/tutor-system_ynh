@@ -50,6 +50,20 @@ The menu only shows what each person can use:
 
 **Settings** holds General, Branding, Roles & permissions and the Activity log as tabs. On session cards, less common actions (add to calendar, cancel, report, change the Meet link) are under **More**.
 
+### Calendar
+
+**Calendar** in the menu shows sessions by month, or as a list (the default on phones), in each person's time zone. Students and tutors see their own sessions. Admins can switch between **Mine** and **Everyone** and filter by tutor. Clicking a session shows the details and the Join button. Requested, confirmed, completed and cancelled sessions each look different (a key is under the calendar).
+
+### Emailing people and setting passwords
+
+- **Email from the portal:** on a person's page, **Send an email**; or on **People → Everyone**, tick several people and choose **Email**. Each person gets their own copy, sent from the site's address with your name at the bottom. Permission: `email:send` (admins). Every send is recorded in the activity log.
+- **Set a new password:** on a person's page, **Set a new password** sets it directly (with an optional **Generate**). Use it when someone can't receive the reset email. They are signed out everywhere, and you can choose to email them that it changed; the password itself is never emailed.
+
+### Archiving and deleting conversations
+
+- **Archive:** anyone can **Archive** a conversation to move it out of their inbox (Messages → Archived). It only affects them, and a new message brings it back for both people.
+- **Delete:** admins with `messages:delete` can permanently **Delete** a conversation and all its messages for both people. Deletions are recorded in the activity log.
+
 ### Reports about tutors (Admin → Reports)
 
 - **Filing a report:** anyone signed in can report a tutor, from a session's **More → Report a problem** or from a conversation with a tutor. They choose a category (safety, behaviour, no-show, teaching quality, other) and describe what happened.

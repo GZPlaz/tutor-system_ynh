@@ -233,6 +233,7 @@ export interface ConversationSummary {
   lastMessageAt: string;
   unread: number;
   openQuestions: number;
+  archived: boolean;
 }
 
 export interface ThreadMessage {

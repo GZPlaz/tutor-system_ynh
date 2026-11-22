@@ -11,6 +11,7 @@ import { api } from '../../lib/api';
 import { fmtDate, fmtDateTime } from '../../lib/time';
 import type { Role, UserRow } from '../../lib/types';
 import { ManageDialog, RolesDialog } from './PeoplePage';
+import { EmailDialog, SetPasswordDialog } from '../../components/AdminDialogs';
 
 interface Overview {
   user: UserRow & {
@@ -30,7 +31,7 @@ const STATUS_LABEL: Record<string, string> = { ACTIVE: 'Active', PENDING: 'Waiti
 const human = (action: string) => action.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
 
-type Dialog = 'edit' | 'roles' | 'suspend' | 'delete' | 'cancel' | null;
+type Dialog = 'edit' | 'roles' | 'suspend' | 'delete' | 'cancel' | 'email' | 'password' | null;
 
 export function PersonPage() {
   const { id } = useParams();
@@ -140,7 +141,9 @@ export function PersonPage() {
         <aside className="person-side">
           <section className="panel action-panel">
             <h2 className="panel-title">Actions</h2>
-            {can('users:manage') && <Button variant="secondary" className="block" onClick={() => setDialog('edit')}>Edit details or reset password</Button>}
+            {can('email:send') && <Button variant="secondary" className="block" icon="mail" onClick={() => setDialog('email')}>Send an email</Button>}
+            {can('users:manage') && <Button variant="secondary" className="block" onClick={() => setDialog('edit')}>Edit details or send reset link</Button>}
+            {can('users:manage') && !u.isGuest && <Button variant="secondary" className="block" onClick={() => setDialog('password')}>Set a new password</Button>}
             {can('users:manage') && <Button variant="secondary" className="block" onClick={() => setDialog('roles')}>Change roles</Button>}
             {can('messages:read_any') && <Link className="btn secondary block" to="/messages?scope=all">Review messages</Link>}
             {d.notes > 0 && can('students:read_notes') && <Link className="btn secondary block" to={`/students/${u.id}`}>Tutor notes ({d.notes})</Link>}
@@ -158,6 +161,8 @@ export function PersonPage() {
       </div>
 
       {dialog === 'edit' && <ManageDialog user={u} isMe={isMe} onClose={() => setDialog(null)} onSaved={(msg) => { toast(msg); void data.reload(); }} />}
+      {dialog === 'email' && <EmailDialog recipients={[{ id: u.id, name: `${u.firstName} ${u.lastName}` }]} onClose={() => setDialog(null)} onSent={() => { setDialog(null); toast(`Email sent to ${first}`); void data.reload(); }} />}
+      {dialog === 'password' && <SetPasswordDialog person={u} onClose={() => setDialog(null)} onDone={() => { setDialog(null); toast(`New password set — ${first} was signed out everywhere`); void data.reload(); }} />}
       {dialog === 'roles' && <RolesDialog user={u} roles={roleOptions} onClose={() => setDialog(null)} onDone={() => { setDialog(null); toast('Roles updated'); void data.reload(); }} />}
       {dialog === 'suspend' && (
         <ConfirmDialog title={`Pause ${first}'s account?`} confirmLabel="Pause account" danger onClose={() => setDialog(null)}

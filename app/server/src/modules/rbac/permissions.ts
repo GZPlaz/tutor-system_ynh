@@ -51,6 +51,8 @@ export const PERMISSIONS = {
 
   // Messages
   MESSAGES_SEND: { key: 'messages:send', category: 'Messages', description: 'Message their tutors or students, and answer questions about upcoming sessions' },
+  MESSAGES_DELETE: { key: 'messages:delete', category: 'Messages', description: 'Permanently delete conversations (logged)' },
+  EMAIL_SEND: { key: 'email:send', category: 'Users', description: 'Email people directly from the portal' },
   MESSAGES_READ_ANY: { key: 'messages:read_any', category: 'Messages', description: 'Read every conversation for safeguarding (read-only; every view is logged)' },
 
   // Platform

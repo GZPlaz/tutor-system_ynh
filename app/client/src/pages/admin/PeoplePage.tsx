@@ -4,6 +4,7 @@
  */
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { EmailDialog } from '../../components/AdminDialogs';
 import { useAuth } from '../../auth/AuthContext';
 import { Icon } from '../../components/Icon';
 import { Avatar, Button, ConfirmDialog, Empty, ErrorText, Loading, Modal, PageHeader, Pill, Segmented, useAction, useApi, useToast, type Paged, type Tone } from '../../components/ui';
@@ -36,6 +37,7 @@ export function PeoplePage() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkRole, setBulkRole] = useState('');
+  const [emailing, setEmailing] = useState(false);
 
   const pending = useApi<Paged<UserRow>>('/users?status=PENDING&pageSize=100');
   const qs = new URLSearchParams({ page: String(page), pageSize: '25' });
@@ -149,6 +151,7 @@ export function PeoplePage() {
           {selected.size > 0 && (
             <div className="bulk-bar" role="region" aria-label="Bulk actions">
               <strong>{selected.size} selected</strong>
+              {can('email:send') && <Button variant="secondary" icon="mail" onClick={() => setEmailing(true)}>Email</Button>}
               <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('send-password-reset', 'Reset links sent')}>Send reset link</Button>
               <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('sign-out', 'Signed out')}>Sign out everywhere</Button>
               <Button variant="secondary" busy={bulkBusy} onClick={() => void runBulk('unlock', 'Unlocked')}>Unlock</Button>
@@ -177,6 +180,13 @@ export function PeoplePage() {
         </>
       )}
 
+      {emailing && (
+        <EmailDialog
+          recipients={(everyone.data?.items ?? []).filter((u) => selected.has(u.id)).map((u) => ({ id: u.id, name: fullName(u) }))}
+          onClose={() => setEmailing(false)}
+          onSent={(n) => { setEmailing(false); toast(`Email sent to ${n} ${n === 1 ? 'person' : 'people'}`); }}
+        />
+      )}
       {dialog?.kind === 'invite' && <InviteDialog roles={roleOptions} onClose={() => setDialog(null)} onDone={(name) => { setDialog(null); toast(`Invitation sent to ${name}`); reloadAll(); }} />}
       {dialog?.kind === 'manage' && <ManageDialog user={dialog.user} isMe={dialog.user.id === me?.id} onClose={() => setDialog(null)} onSaved={(msg) => { toast(msg); reloadAll(); }} />}
       {dialog?.kind === 'roles' && <RolesDialog user={dialog.user} roles={roleOptions} onClose={() => setDialog(null)} onDone={() => { setDialog(null); toast('Roles updated'); reloadAll(); }} />}

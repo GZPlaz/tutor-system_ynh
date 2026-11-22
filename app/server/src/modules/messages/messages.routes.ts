@@ -46,10 +46,11 @@ messagesRouter.get('/contacts', requirePermission(P.MESSAGES_SEND), async (req, 
   res.json(await svc.contactsFor(authOf(req)));
 });
 
-const ListQuery = z.object({ scope: z.enum(['mine', 'all']).default('mine') });
+const ListQuery = z.object({ scope: z.enum(['mine', 'all']).default('mine'), archived: z.enum(['true', 'false']).default('false') });
 messagesRouter.get('/conversations', canUse, validate({ query: ListQuery }), async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.json(await svc.listConversations(authOf(req), parsed(req, 'query', ListQuery).scope));
+  const q = parsed(req, 'query', ListQuery);
+  res.json(await svc.listConversations(authOf(req), q.scope, q.archived === 'true'));
 });
 
 const StartBody = z.object({ userId: Uuid, relation: z.enum(['tutor', 'student']).optional() });
@@ -84,4 +85,14 @@ const QuestionBody = z.object({ bookingId: Uuid, body: Body });
 messagesRouter.post('/questions', requirePermission(P.MESSAGES_SEND), sendLimiter, validate({ body: QuestionBody }), async (req, res) => {
   const { bookingId, body } = parsed(req, 'body', QuestionBody);
   res.status(201).json(await svc.askQuestion(authOf(req), bookingId, body));
+});
+
+messagesRouter.post('/conversations/:id/archive', requirePermission(P.MESSAGES_SEND), validate({ params: IdParams, body: z.object({ archived: z.boolean() }) }), async (req, res) => {
+  await svc.setArchived(authOf(req), parsed(req, 'params', IdParams).id, (req.valid.body as { archived: boolean }).archived);
+  res.status(204).end();
+});
+
+messagesRouter.delete('/conversations/:id', requirePermission(P.MESSAGES_DELETE), validate({ params: IdParams }), async (req, res) => {
+  await svc.deleteConversation(authOf(req), parsed(req, 'params', IdParams).id);
+  res.status(204).end();
 });

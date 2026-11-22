@@ -25,6 +25,7 @@ import { ActivityPage } from './pages/admin/ActivityPage';
 import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
 import { PacketsPage } from './pages/PacketsPage';
 import { MessagesPage } from './pages/MessagesPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { InsightsPage } from './pages/admin/InsightsPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { PersonPage } from './pages/admin/PersonPage';
@@ -56,6 +57,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           {gate(['sessions:view_feed'], <Route path="/sessions" element={<SessionsPage />} />)}
+          {gate(['sessions:view_feed'], <Route path="/calendar" element={<CalendarPage />} />)}
           {gate(['messages:send', 'messages:read_any'], <Route path="/messages" element={<MessagesPage />} />)}
           {gate(['availability:manage_own', 'availability:manage_any'], <Route path="/availability" element={<AvailabilityPage />} />)}
           {gate(['resources:read_assigned', 'resources:create', 'resources:manage_any'], <Route path="/resources" element={<ResourcesPage />} />)}
