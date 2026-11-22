@@ -19,7 +19,7 @@ import { Unauthorized } from '../../lib/errors.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authOf } from '../../middleware/authorize.js';
 import { parsed, validate } from '../../middleware/validate.js';
-import { authLimiter, requireSameOrigin } from '../../middleware/security.js';
+import { authLimiter, loginLimiter, requireSameOrigin } from '../../middleware/security.js';
 import {
   ChangePasswordSchema,
   ForgotPasswordSchema,
@@ -56,7 +56,7 @@ authRouter.post('/register', authLimiter, validate({ body: RegisterSchema }), as
   });
 });
 
-authRouter.post('/login', authLimiter, validate({ body: LoginSchema }), async (req, res) => {
+authRouter.post('/login', loginLimiter, validate({ body: LoginSchema }), async (req, res) => {
   const { accessToken, refreshToken, user } = await auth.login(parsed(req, 'body', LoginSchema), meta(req));
   setRefreshCookie(res, refreshToken);
   res.json({ accessToken, user });
@@ -64,7 +64,8 @@ authRouter.post('/login', authLimiter, validate({ body: LoginSchema }), async (r
 
 authRouter.post('/refresh', requireSameOrigin, async (req, res) => {
   const raw = req.cookies?.[REFRESH_COOKIE] as string | undefined;
-  if (!raw) throw Unauthorized('No session', 'NO_SESSION');
+  // Not signed in is the normal state for visitors: answer quietly (no 401 noise in the console).
+  if (!raw) return void res.status(204).end();
   try {
     const { userId, refreshToken } = await rotateRefreshToken(raw, meta(req));
     const accessToken = await auth.issueAccessTokenFor(userId);

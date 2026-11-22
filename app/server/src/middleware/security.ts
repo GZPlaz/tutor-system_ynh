@@ -2,7 +2,7 @@
  * HTTP hardening that applies to the whole API.
  */
 import type { RequestHandler } from 'express';
-import { rateLimit } from 'express-rate-limit';
+import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import { env } from '../config/env.js';
 import { Forbidden } from '../lib/errors.js';
@@ -31,18 +31,37 @@ export const securityHeaders = helmet({
   crossOriginResourcePolicy: { policy: 'same-origin' },
 });
 
-/** Generous global limit to blunt scraping / runaway clients. */
+/**
+ * Generous limit on the API (not the web app's own files) to blunt scraping and runaway
+ * clients. Per network address, so it is configurable: a school where everyone shares one
+ * address may need more (RATE_LIMIT_PER_MINUTE in .env).
+ */
 export const globalLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 300,
+  limit: env.RATE_LIMIT_PER_MINUTE,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+  skip: (req) => !req.path.startsWith('/api/') || req.path === '/api/health',
 });
 
-/** Tight limit for credential endpoints (login, register, password reset). */
-export const authLimiter = rateLimit({
+/**
+ * Sign-in attempts are counted per account and network address, not per address alone,
+ * so a classroom on one connection isn't locked out together. (Each account also locks
+ * itself after repeated wrong passwords: MAX_FAILED_LOGINS.)
+ */
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60_000,
   limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? '')}:${String((req.body as { email?: unknown })?.email ?? '').toLowerCase().slice(0, 200)}`,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many attempts. Try again in a few minutes.' } },
+});
+
+/** Limit for the other credential endpoints (register, password reset), per address. */
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 60,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: { code: 'RATE_LIMITED', message: 'Too many attempts. Try again in a few minutes.' } },

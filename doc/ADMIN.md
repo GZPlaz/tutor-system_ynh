@@ -116,6 +116,11 @@ Students and tutors have private conversations under **Messages** in the menu.
 - **Limits:** messages are up to 4,000 characters, and each person can send up to 40 messages per 5 minutes.
 - **Permissions:** students and tutors get `messages:send` automatically, including on existing sites when you upgrade. Remove it from a role in Admin → Roles to turn messaging off for that role.
 
+### Rate limits (schools on one connection)
+
+- **Sign-in attempts:** counted per account and network address, so a classroom signing in together is never blocked as a group. Each account also locks itself after repeated wrong passwords; admins can unlock it from the person's page.
+- **General API limit:** `RATE_LIMIT_PER_MINUTE` in `/var/www/mindaccel/.env` (default 1,200 requests per minute per address). Raise it if a large group shares one connection, then `sudo systemctl restart mindaccel`.
+
 ### Support references
 
 If something unexpected goes wrong, the error message shows a short reference, like `(Reference: a8703517)`. Search the log for it to find the exact request:

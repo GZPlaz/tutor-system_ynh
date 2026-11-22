@@ -33,7 +33,7 @@ async function refresh(): Promise<boolean> {
   refreshing ??= (async () => {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) return false;
+      if (!res.ok || res.status === 204) return false;
       const data = (await res.json()) as { accessToken: string };
       accessToken = data.accessToken;
       return true;

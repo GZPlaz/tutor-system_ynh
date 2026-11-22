@@ -337,7 +337,10 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .attention-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r-md); background: var(--surface); color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-left: 3px solid var(--accent); }
 .attention-link span { flex: 1; }
 .attention-link:hover { background: var(--surface-2); }
-.session-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); overflow: hidden; }
+.session-list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow); }
+/* No overflow clipping here: it would cut off each card's "More" menu. Round the end cards instead. */
+.session-list > .session:first-child { border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.session-list > .session:last-child { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
 .next-up .session-list, .next-up > .session { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow); }
 .session { position: relative; display: grid; grid-template-columns: 64px 1fr; gap: 18px; padding: 18px 20px; border-top: 1px solid var(--line); }
 .session:first-child { border-top: 0; }
@@ -804,6 +807,9 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .more-menu { position: relative; }
 .more-trigger { min-height: 32px; padding: 4px 10px; font-size: 0.88rem; }
 .more-chevron { transform: rotate(90deg); }
+.more-items.up { top: auto; bottom: calc(100% + 4px); }
+.more-items.left { right: auto; left: 0; }
+.more-items { max-width: calc(100vw - 32px); }
 .more-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 230px; display: grid; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-pop); }
 .more-items button { text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: var(--r-sm); font: inherit; font-size: 0.9rem; color: var(--ink); cursor: pointer; }
 .more-items button:hover, .more-items button:focus-visible { background: var(--surface-2); outline: none; }
@@ -847,3 +853,6 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .book-for { display: grid; gap: 10px; margin-bottom: 18px; }
 .book-for-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .book-for .search-field { max-width: none; }
+
+/* Two tab groups side by side (e.g. Upcoming/Past and Mine/Everyone) must read as separate controls. */
+.toolbar .segmented + .segmented { margin-left: 12px; padding-left: 20px; border-left: 1px solid var(--line); }

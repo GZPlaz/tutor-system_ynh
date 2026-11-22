@@ -4,7 +4,7 @@
  * sees Confirm / Add Meet link / Start / End, a student sees Join, and
  * nobody sees a button the server would refuse.
  */
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { refreshMessageSummary, useMessageSummary } from '../lib/messages';
@@ -353,15 +353,25 @@ type MenuItem = { label: string; onClick: () => void; danger?: boolean };
 function MoreMenu({ items }: { items: (MenuItem | false | undefined | null)[] }) {
   const list = items.filter(Boolean) as MenuItem[];
   const [open, setOpen] = useState(false);
+  const [up, setUp] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(false);
   if (!list.length) return null;
+  const toggle = (e: MouseEvent<HTMLButtonElement>) => {
+    // Open upwards when there isn't room below (e.g. the last card on the page).
+    const r = e.currentTarget.getBoundingClientRect();
+    setUp(window.innerHeight - r.bottom < 48 + list.length * 40);
+    // Near the left edge (wrapped buttons on phones), open to the right instead.
+    setAlignLeft(r.right < 250);
+    setOpen((o) => !o);
+  };
   return (
     <div className="more-menu" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}>
-      <button type="button" className="btn ghost more-trigger" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+      <button type="button" className="btn ghost more-trigger" aria-haspopup="menu" aria-expanded={open} onClick={toggle}
         onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
         More <Icon name="chevronRight" size={14} className="more-chevron" />
       </button>
       {open && (
-        <div className="more-items" role="menu" onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+        <div className={`more-items ${up ? 'up' : ''} ${alignLeft ? 'left' : ''}`} role="menu" onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
           {list.map((it) => (
             <button key={it.label} type="button" role="menuitem" className={it.danger ? 'danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>
           ))}

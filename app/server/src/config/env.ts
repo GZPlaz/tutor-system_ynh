@@ -50,6 +50,9 @@ const schema = z.object({
   SEED_ADMIN_FIRST_NAME: z.string().default('Admin'),
   SEED_ADMIN_LAST_NAME: z.string().default('User'),
 
+  /** API requests per minute per network address (raise for schools sharing one connection). */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(60).default(1200),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 
