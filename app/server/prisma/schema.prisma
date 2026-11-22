@@ -147,6 +147,8 @@ model User {
   /// Email preferences (Profile → Notifications). Account and booking emails always send.
   emailOnMessage   Boolean    @default(true) @map("email_on_message")
   emailReminders   Boolean    @default(true) @map("email_reminders")
+  /// Secret part of the personal calendar feed URL; reset it to invalidate old links.
+  calendarKey      String?    @map("calendar_key")
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -178,6 +180,7 @@ model User {
   conversationsAsStudent Conversation[] @relation("ConversationStudent")
   conversationsAsTutor   Conversation[] @relation("ConversationTutor")
   messagesSent           Message[]
+  feedbackGiven          SessionFeedback[]
 
   subscriptions  Subscription[]
   payments       Payment[]
@@ -396,6 +399,9 @@ model Booking {
   status             BookingStatus @default(PENDING)
   studentNotes       String?       @map("student_notes")
   meetingUrl         String?       @map("meeting_url")
+  /// The tutor's summary after the session: what was covered, homework.
+  recap         String?
+  recapPostedAt DateTime? @map("recap_posted_at") @db.Timestamptz(3)
   meetingPostedAt    DateTime?     @map("meeting_posted_at") @db.Timestamptz(3)
   confirmedAt        DateTime?     @map("confirmed_at") @db.Timestamptz(3)
   /// Tutors may start early and end early; these record what actually happened.
@@ -429,6 +435,7 @@ model Booking {
   subscription  Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   creditEntries SessionCredit[]
   messages      Message[]
+  feedback      SessionFeedback?
 
   @@index([tutorId, startsAt])
   @@index([studentId, startsAt])
@@ -585,6 +592,23 @@ model Message {
   @@index([conversationId, createdAt])
   @@index([bookingId])
   @@map("messages")
+}
+
+/// A student's rating of a finished session (one per session, editable for 14 days).
+model SessionFeedback {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId String   @unique @map("booking_id") @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  rating    Int      @db.SmallInt
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("session_feedback")
 }
 
 // -----------------------------------------------------------------------------

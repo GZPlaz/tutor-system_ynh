@@ -218,6 +218,16 @@ export const templates = {
     text: `${d.tutorName} has a question before your ${d.serviceName} session (${d.when}):\n\n${d.question}\n\nAnswer it: ${link(`/messages?c=${encodeURIComponent(String(d.conversationId))}`)}`,
   }),
 
+  session_recap: (d, b) => ({
+    subject: `Recap of your ${d.serviceName} session`,
+    html: layout(b, `${d.tutorName} wrote a recap of your session`,
+      detail(d.serviceName, d.when) +
+      `<div style="margin:0 0 18px;padding:12px 16px;border-left:3px solid #C3CCC7;background:#F6F7F4;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(d.recap)}</div>` +
+      p('You can find it on the session any time, and rate how the session went.'),
+      { label: d.manageUrl ? 'Open your booking' : 'See the session', url: d.manageUrl ? String(d.manageUrl) : link('/sessions?view=past') }),
+    text: `${d.tutorName} wrote a recap of your ${d.serviceName} session (${d.when}):\n\n${d.recap}\n\n${d.manageUrl ? String(d.manageUrl) : link('/sessions?view=past')}`,
+  }),
+
   meeting_link_posted: (d, b) => ({
     subject: `Your Meet link for ${d.serviceName}`,
     html: layout(b, 'Your Google Meet link is ready',

@@ -8,7 +8,7 @@ import { api, setAccessToken } from '../lib/api';
 import { allTimeZones, browserTimeZone } from '../lib/time';
 
 export function ProfilePage() {
-  const { user, reload } = useAuth();
+  const { user, reload, can } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState({ firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', timezone: user?.timezone ?? 'UTC' });
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '', confirm: '' });
@@ -91,6 +91,8 @@ export function ProfilePage() {
         </div>
       </Section>
 
+      {can('sessions:view_feed') && <CalendarSync />}
+
       <Section title="Password">
         <form className="panel form" onSubmit={(e) => { e.preventDefault(); void changePassword(); }}>
           <label className="field"><span>Current password</span><input type="password" autoComplete="current-password" required value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} /></label>
@@ -122,5 +124,59 @@ export function ProfilePage() {
         </div>
       </Section>
     </div>
+  );
+}
+
+/** Personal calendar feed: subscribe once and sessions appear in Google/Apple/Outlook calendars. */
+function CalendarSync() {
+  const toast = useToast();
+  const [url, setUrl] = useState<string | null>(null);
+  const [show, showing, showErr] = useAction(async () => {
+    setUrl((await api<{ url: string }>('/sessions/calendar-feed')).url);
+  });
+  const [reset, resetting, resetErr] = useAction(async () => {
+    setUrl((await api<{ url: string }>('/sessions/calendar-feed/reset', { method: 'POST' })).url);
+    toast('New link created. The old one no longer works.');
+  });
+  const copy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied');
+    } catch {
+      toast('Select the link and copy it');
+    }
+  };
+  return (
+    <Section title="Calendar sync">
+      <div className="panel form">
+        <p className="muted">Subscribe once, and your sessions appear in Google Calendar, Apple Calendar or Outlook and stay up to date, including new bookings, changes and cancellations.</p>
+        {!url ? (
+          <div className="button-row"><Button variant="secondary" icon="calendarSync" busy={showing} onClick={() => void show()}>Show my calendar link</Button></div>
+        ) : (
+          <>
+            <label className="field">
+              <span>Your private calendar link</span>
+              <div className="copy-row">
+                <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
+                <Button variant="secondary" icon="copy" onClick={() => void copy()}>Copy</Button>
+              </div>
+              <small className="hint">Anyone with this link can see your session times and who they're with. Don't share it.</small>
+            </label>
+            <details className="howto">
+              <summary>How to add it</summary>
+              <ul>
+                <li><strong>Google Calendar:</strong> on a computer, Other calendars → + → From URL → paste the link.</li>
+                <li><strong>Apple Calendar:</strong> File → New Calendar Subscription → paste the link. On iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</li>
+                <li><strong>Outlook:</strong> Add calendar → Subscribe from web → paste the link.</li>
+              </ul>
+              <p className="hint">Calendar apps check for changes every few hours, so new bookings can take a little while to appear.</p>
+            </details>
+            <div className="button-row"><button className="link-btn" disabled={resetting} onClick={() => void reset()}>Shared it by mistake? Create a new link</button></div>
+          </>
+        )}
+        <ErrorText>{showErr || resetErr}</ErrorText>
+      </div>
+    </Section>
   );
 }

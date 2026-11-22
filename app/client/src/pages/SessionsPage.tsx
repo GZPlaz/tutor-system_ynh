@@ -4,6 +4,7 @@
  * 30 seconds so a new Meet link or "Live now" appears without reloading.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Section } from '../components/Shell';
@@ -13,7 +14,8 @@ import type { Session } from '../lib/types';
 
 export function SessionsPage() {
   const { can, canAny } = useAuth();
-  const [view, setView] = useState<'upcoming' | 'past'>('upcoming');
+  const [params] = useSearchParams();
+  const [view, setView] = useState<'upcoming' | 'past'>(params.get('view') === 'past' ? 'past' : 'upcoming');
   const [scope, setScope] = useState<'mine' | 'all'>('mine');
   const list = useApi<Session[]>(`/sessions?view=${view}&scope=${scope}`);
 

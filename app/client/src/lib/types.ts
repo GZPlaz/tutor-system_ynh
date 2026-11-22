@@ -199,6 +199,11 @@ export interface Session {
   notes: string | null;
   reason: string | null;
   meetingUrl: string | null;
+  recap: string | null;
+  recapPostedAt: string | null;
+  feedback: { rating: number; comment: string | null; updatedAt: string } | null;
+  canRecap: boolean;
+  canRate: boolean;
   actions: SessionActions;
   posts: { id: string; kind: string; message: string | null; author: string; createdAt: string }[];
 }
@@ -258,4 +263,18 @@ export interface Thread {
 export interface MessageSummary {
   unread: number;
   openQuestions: { messageId: string; conversationId: string; tutorName: string; bookingId: string | null; service: string | null; startsAt: string | null }[];
+}
+
+// ---- insights ------------------------------------------------------------------------
+
+export interface Insights {
+  period: { from: string; to: string; weeks: number };
+  totals: {
+    completed: number; upcoming: number; missedRate: number | null; cancelRate: number | null;
+    averageRating: number | null; ratings: number; newPeople: number; activeStudents: number; messages: number; packetDownloads: number;
+  };
+  weekly: { weekStart: string; completed: number; missed: number; cancelled: number }[];
+  subjects: { service: string; completed: number; booked: number }[];
+  tutors: { tutor: string; completed: number; missed: number; rating: number | null; ratings: number }[];
+  recentFeedback: { rating: number; comment: string; at: string; service: string; tutor: string; sessionAt: string }[];
 }

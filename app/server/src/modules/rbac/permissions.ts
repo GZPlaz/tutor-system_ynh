@@ -49,6 +49,7 @@ export const PERMISSIONS = {
   MESSAGES_READ_ANY: { key: 'messages:read_any', category: 'Messages', description: 'Read every conversation for safeguarding (read-only; every view is logged)' },
 
   // Platform
+  REPORTS_READ: { key: 'reports:read', category: 'Platform', description: 'See the Insights page (session trends, ratings) and export data as CSV' },
   AUDIT_READ: { key: 'audit:read', category: 'Platform', description: 'Read the audit log' },
   SETTINGS_MANAGE: { key: 'settings:manage', category: 'Platform', description: "Change site settings (sign-ups, booking rules, maintenance) and branding" },
 } as const;

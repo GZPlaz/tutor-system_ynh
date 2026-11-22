@@ -20,6 +20,7 @@ import { audit } from '../audit/audit.service.js';
 import { enqueueEmail } from '../email/email.service.js';
 import { P } from '../rbac/permissions.js';
 import { actionsFor, bookingInclude, getBookingForParticipant, guestLink } from '../scheduling/scheduling.service.js';
+import { feedbackOpen } from './followup.service.js';
 
 type Auth = Express.AuthContext;
 
@@ -46,6 +47,7 @@ export async function listSessions(auth: Auth, q: { view: 'upcoming' | 'past'; s
     include: {
       ...bookingInclude,
       feedPosts: { orderBy: { createdAt: 'desc' }, take: 8, include: { author: { select: { firstName: true, lastName: true } } } },
+      feedback: { select: { rating: true, comment: true, updatedAt: true } },
     },
     orderBy: { startsAt: q.view === 'upcoming' ? 'asc' : 'desc' },
     take: q.limit,
@@ -69,6 +71,12 @@ export async function listSessions(auth: Auth, q: { view: 'upcoming' | 'past'; s
       notes: b.studentNotes,
       reason: b.cancelReason,
       meetingUrl: b.meetingUrl,
+      recap: b.recap,
+      recapPostedAt: b.recapPostedAt,
+      // Students see their own rating; tutors and staff see what the student said.
+      feedback: b.feedback,
+      canRecap: myRole === 'tutor' && b.status === 'COMPLETED',
+      canRate: myRole === 'student' && feedbackOpen(b, now),
       actions: actionsFor(auth, b, now),
       posts: b.feedPosts.map((p) => ({
         id: p.id,

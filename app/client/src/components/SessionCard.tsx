@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { refreshMessageSummary, useMessageSummary } from '../lib/messages';
-import { api } from '../lib/api';
+import { api, downloadFile } from '../lib/api';
 import { fmtTime } from '../lib/time';
 import type { Session } from '../lib/types';
 import { Icon } from './Icon';
@@ -128,6 +128,7 @@ export function SessionCard({
           <span className="spacer" />
           {messageLink && <Link className="link-btn" to={messageLink}>Message {other!.name.split(' ')[0]}</Link>}
           {canMessage && s.myRole === 'tutor' && upcoming && <button className="link-btn" onClick={() => setAsking(true)}>Ask a question</button>}
+          {upcoming && s.myRole !== 'staff' && <button className="link-btn" onClick={() => void downloadFile(`/sessions/${s.id}/calendar.ics`, `${s.service.replace(/[^\w-]+/g, '-')}.ics`).catch(() => toast("Couldn't download the calendar file"))}>Add to calendar</button>}
           {a.postLink && s.meetingUrl && !editingLink && (
             <button className="link-btn" onClick={() => setEditingLink(true)}>Change link</button>
           )}
@@ -157,6 +158,9 @@ export function SessionCard({
             <small className="hint">Create a meeting in Google Meet, then paste its link. The student is emailed right away.</small>
           </form>
         )}
+        {/* Prompt for a recap only on recent sessions; an existing recap stays editable. */}
+        {(s.recap || (s.canRecap && Date.now() - new Date(s.endsAt).getTime() < 14 * 864e5)) && <RecapBlock session={s} onSaved={onChange} />}
+        {(s.canRate || s.feedback) && <FeedbackBlock session={s} onSaved={onChange} />}
         {openQuestion && (
           <Link className="session-question" to={`/messages?c=${openQuestion.conversationId}`}>
             <Icon name="help" size={18} />
@@ -227,5 +231,114 @@ function AskQuestion({ session, onClose, onDone }: { session: Session; onClose: 
       </label>
       <ErrorText>{error}</ErrorText>
     </Modal>
+  );
+}
+
+function RecapBlock({ session: s, onSaved }: { session: Session; onSaved: () => void }) {
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(s.recap ?? '');
+  const [save, busy, error] = useAction(async () => {
+    const r = await api<{ emailed: boolean }>(`/sessions/${s.id}/recap`, { method: 'PUT', json: { recap: text.trim() } });
+    setEditing(false);
+    toast(r.emailed ? `Recap saved — ${s.student.name.split(' ')[0]} was emailed` : 'Recap updated');
+    onSaved();
+  });
+  if (editing) {
+    return (
+      <div className="recap editing">
+        <label className="field">
+          <span>Session recap</span>
+          <textarea rows={5} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={'What we covered:\n\nHomework before next time:'} autoFocus />
+          <small className="hint">{s.recapPostedAt ? 'Edits are not emailed again.' : `${s.student.name.split(' ')[0]} is emailed when you save.`}</small>
+        </label>
+        <ErrorText>{error}</ErrorText>
+        <div className="button-row tight">
+          <Button busy={busy} disabled={!text.trim()} onClick={() => void save()}>Save recap</Button>
+          <Button variant="ghost" onClick={() => { setEditing(false); setText(s.recap ?? ''); }}>Cancel</Button>
+        </div>
+      </div>
+    );
+  }
+  if (!s.recap) {
+    return (
+      <div className="recap empty-recap">
+        <span>Write a short recap: what you covered and any homework. {s.student.name.split(' ')[0]} is emailed a copy.</span>
+        <Button variant="secondary" onClick={() => setEditing(true)}>Write recap</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="recap">
+      <div className="recap-head">
+        <strong>Recap from {s.tutor.name.split(' ')[0]}</strong>
+        {s.canRecap && <button className="link-btn" onClick={() => setEditing(true)}>Edit</button>}
+      </div>
+      <p>{s.recap}</p>
+    </div>
+  );
+}
+
+function Stars({ value, onPick, label }: { value: number; onPick?: (n: number) => void; label: string }) {
+  return (
+    <span className={`stars ${onPick ? 'pickable' : ''}`} role={onPick ? 'radiogroup' : 'img'} aria-label={onPick ? label : `${value} out of 5`}>
+      {[1, 2, 3, 4, 5].map((n) =>
+        onPick ? (
+          <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} star${n > 1 ? 's' : ''}`} className={n <= value ? 'on' : ''} onClick={() => onPick(n)}>
+            <Icon name="star" size={20} />
+          </button>
+        ) : (
+          <span key={n} className={n <= value ? 'on' : ''}><Icon name="star" size={16} /></span>
+        ),
+      )}
+    </span>
+  );
+}
+
+function FeedbackBlock({ session: s, onSaved }: { session: Session; onSaved: () => void }) {
+  const toast = useToast();
+  const [rating, setRating] = useState(s.feedback?.rating ?? 0);
+  const [comment, setComment] = useState(s.feedback?.comment ?? '');
+  const [editing, setEditing] = useState(!s.feedback);
+  const [send, busy, error] = useAction(async () => {
+    await api(`/sessions/${s.id}/feedback`, { method: 'PUT', json: { rating, comment: comment.trim() || undefined } });
+    setEditing(false);
+    toast('Thanks for your feedback');
+    onSaved();
+  });
+
+  if (s.myRole !== 'student') {
+    return s.feedback ? (
+      <div className="feedback-view">
+        <Stars value={s.feedback.rating} label="Rating" />
+        <span>{s.student.name.split(' ')[0]} rated this session{s.feedback.comment ? `: “${s.feedback.comment}”` : '.'}</span>
+      </div>
+    ) : null;
+  }
+  if (!editing && s.feedback) {
+    return (
+      <div className="feedback-view">
+        <Stars value={s.feedback.rating} label="Your rating" />
+        <span>You rated this session{s.feedback.comment ? `: “${s.feedback.comment}”` : '.'}</span>
+        {s.canRate && <button className="link-btn" onClick={() => setEditing(true)}>Change</button>}
+      </div>
+    );
+  }
+  return (
+    <div className="feedback-form">
+      <span className="feedback-q">How was this session?</span>
+      <Stars value={rating} onPick={setRating} label="Rate this session from 1 to 5 stars" />
+      {rating > 0 && (
+        <>
+          <label className="sr-only" htmlFor={`fb-${s.id}`}>Comment (optional)</label>
+          <textarea id={`fb-${s.id}`} rows={2} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Anything your tutor or the team should know? (optional)" />
+          <div className="button-row tight">
+            <Button busy={busy} onClick={() => void send()}>Send feedback</Button>
+            {s.feedback && <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>}
+          </div>
+        </>
+      )}
+      <ErrorText>{error}</ErrorText>
+    </div>
   );
 }

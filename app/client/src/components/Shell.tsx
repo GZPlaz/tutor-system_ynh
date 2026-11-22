@@ -79,6 +79,7 @@ export function Shell() {
     {
       title: 'Admin',
       items: [
+        { to: '/admin/insights', label: 'Insights', icon: 'chart', show: can('reports:read') },
         { to: '/admin/people', label: 'People', icon: 'user', show: canAny('users:read', 'users:approve'), badge: counts.pending },
         { to: '/admin/services', label: 'Services', icon: 'layers', show: can('services:manage') },
         { to: '/admin/packets', label: 'Study packets', icon: 'file', show: can('packets:manage') },

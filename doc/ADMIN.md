@@ -38,6 +38,22 @@ People can also, from their own **Profile**:
 - turn message emails and session reminders on or off (booking and account emails always send)
 - email themselves a reset link if they've forgotten their current password
 
+### Insights and exports (Admin → Insights)
+
+- **What it shows:** sessions completed, upcoming, no-show and cancellation rates, average rating, students taught, new accounts, messages, a weekly chart, and breakdowns by subject and tutor, plus the latest written feedback. You can pick 4 weeks, 12 weeks or 6 months.
+- **Exports:** **Sessions CSV** (the selected period) and **People CSV** open in Excel or Google Sheets. They contain names and emails, so every export is recorded in the activity log.
+- **Permission:** `reports:read` (administrators only by default).
+
+### After a session: recaps and ratings
+
+- **Recaps:** when a session ends, the tutor can write a recap (what was covered, homework). The student is emailed the first time; later edits are silent. Recaps stay on the session for both people.
+- **Ratings:** students can rate a finished session from 1 to 5 stars with an optional comment, and change it for 14 days. Tutors see their own ratings; admins see everything on the Insights page.
+
+### Calendars
+
+- **Single session:** each upcoming session has **Add to calendar**, which downloads a file for Google, Apple or Outlook calendar.
+- **Calendar sync:** **Profile → Calendar sync** gives each person a private link. Subscribing to it in their calendar app keeps every session, change and cancellation in sync. If the link is shared by mistake, **Create a new link** stops the old one working.
+
 ### Messages
 
 Students and tutors have private conversations under **Messages** in the menu.

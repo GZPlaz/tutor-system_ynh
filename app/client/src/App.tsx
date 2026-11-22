@@ -25,6 +25,7 @@ import { ActivityPage } from './pages/admin/ActivityPage';
 import { PacketsAdminPage } from './pages/admin/PacketsAdminPage';
 import { PacketsPage } from './pages/PacketsPage';
 import { MessagesPage } from './pages/MessagesPage';
+import { InsightsPage } from './pages/admin/InsightsPage';
 import { Empty } from './components/ui';
 
 const gate = (any: string[], element: ReactElement) => <Route element={<RequirePermission any={any} />}>{element}</Route>;
@@ -62,6 +63,7 @@ export default function App() {
           {gate(['roles:manage'], <Route path="/admin/roles" element={<RolesPage />} />)}
           {gate(['settings:manage'], <Route path="/admin/settings" element={<SettingsPage />} />)}
           {gate(['settings:manage'], <Route path="/admin/branding" element={<BrandingPage />} />)}
+          {gate(['reports:read'], <Route path="/admin/insights" element={<InsightsPage />} />)}
           {gate(['audit:read'], <Route path="/admin/activity" element={<ActivityPage />} />)}
 
           {/* Addresses from the previous version (and older emails) */}

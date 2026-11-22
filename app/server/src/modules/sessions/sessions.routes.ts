@@ -13,6 +13,8 @@ import { authOf, requirePermission } from '../../middleware/authorize.js';
 import { parsed, validate } from '../../middleware/validate.js';
 import { P } from '../rbac/permissions.js';
 import { GOOGLE_MEET_URL, listSessions, postMeetingLink, postNote, sessionCounts } from './sessions.service.js';
+import { calendarFeed, calendarFeedUrl, saveFeedback, saveRecap, sessionIcs } from './followup.service.js';
+import { rateLimit } from 'express-rate-limit';
 
 export const sessionsRouter = Router();
 sessionsRouter.use(authenticate);
@@ -60,5 +62,47 @@ sessionsRouter.post(
   async (req, res) => {
     const { message } = req.valid.body as { message: string };
     res.status(201).json(await postNote(authOf(req), parsed(req, 'params', BookingParams).bookingId, message));
+  },
+);
+
+// ---- recaps, feedback, calendars -----------------------------------------------------
+
+const RecapBody = z.object({ recap: z.string().trim().min(1, 'Write a short recap first').max(4000) });
+sessionsRouter.put('/:bookingId/recap', requirePermission(P.SESSIONS_RUN), validate({ params: BookingParams, body: RecapBody }), async (req, res) => {
+  res.json(await saveRecap(authOf(req), parsed(req, 'params', BookingParams).bookingId, parsed(req, 'body', RecapBody).recap));
+});
+
+const FeedbackBody = z.object({ rating: z.number().int().min(1).max(5), comment: z.string().trim().max(1000).optional() });
+sessionsRouter.put('/:bookingId/feedback', requirePermission(P.SESSIONS_VIEW_FEED), validate({ params: BookingParams, body: FeedbackBody }), async (req, res) => {
+  res.json(await saveFeedback(authOf(req), parsed(req, 'params', BookingParams).bookingId, parsed(req, 'body', FeedbackBody)));
+});
+
+sessionsRouter.get('/calendar-feed', requirePermission(P.SESSIONS_VIEW_FEED), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(await calendarFeedUrl(authOf(req)));
+});
+
+sessionsRouter.post('/calendar-feed/reset', requirePermission(P.SESSIONS_VIEW_FEED), async (req, res) => {
+  res.json(await calendarFeedUrl(authOf(req), true));
+});
+
+sessionsRouter.get('/:bookingId/calendar.ics', requirePermission(P.SESSIONS_VIEW_FEED), validate({ params: BookingParams }), async (req, res) => {
+  const ics = await sessionIcs(authOf(req), parsed(req, 'params', BookingParams).bookingId);
+  res.type('text/calendar').setHeader('Content-Disposition', 'attachment; filename="session.ics"');
+  res.send(ics);
+});
+
+/** /api/public/calendar/:userId/:token.ics — polled by calendar apps, no sign-in. */
+export const publicCalendarRouter = Router();
+const feedLimiter = rateLimit({ windowMs: 60 * 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false });
+publicCalendarRouter.get(
+  '/:userId/:file',
+  feedLimiter,
+  validate({ params: z.object({ userId: z.string().uuid(), file: z.string().regex(/^[\w-]{16,64}\.ics$/) }) }),
+  async (req, res) => {
+    const { userId, file } = req.valid.params as { userId: string; file: string };
+    const ics = await calendarFeed(userId, file.replace(/\.ics$/, ''));
+    res.type('text/calendar').setHeader('Cache-Control', 'private, max-age=300');
+    res.send(ics);
   },
 );
