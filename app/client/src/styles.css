@@ -72,6 +72,7 @@
 *,
 *::before,
 *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); }
 img { max-width: 100%; }
 a { color: var(--brand-text); text-underline-offset: 3px; }
@@ -156,9 +157,13 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .switch input:focus-visible + .switch-track { box-shadow: var(--focus); }
 
 /* ---------------------------------------------------------------- shell ---- */
-.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; background: linear-gradient(to right, var(--sidebar) 239px, var(--line) 239px, var(--line) 240px, var(--bg) 240px); }
+.shell {
+  --sidebar-w: 240px;
+  display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh;
+  background: linear-gradient(to right, var(--sidebar) calc(var(--sidebar-w) - 1px), var(--line) calc(var(--sidebar-w) - 1px), var(--line) var(--sidebar-w), var(--bg) var(--sidebar-w));
+}
 .sidebar {
-  position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column;
   background: var(--sidebar); border-right: 1px solid var(--line); padding: 18px 12px 12px;
 }
 .sidebar-brand { text-decoration: none; color: inherit; padding: 4px 10px 20px; }
@@ -191,14 +196,26 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .page.wide { max-width: 1200px; }
 .boot { min-height: 60vh; display: grid; place-items: center; }
 
+/* Tablets in landscape and small laptops: a slimmer sidebar and less padding. */
+@media (min-width: 901px) and (max-width: 1280px) {
+  .shell { --sidebar-w: 228px; }
+  .main { padding: 28px 32px 64px; }
+}
+
 @media (max-width: 900px) {
-  .shell { grid-template-columns: 1fr; background: var(--bg); }
+  /* rows: top bar, then the page. Without this the grid stretches the top bar on short pages. */
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-content: start; background: var(--bg); }
   .mobile-bar { display: flex; position: sticky; top: 0; z-index: 30; align-items: center; justify-content: space-between; padding: 10px 12px 10px 16px; background: var(--sidebar); border-bottom: 1px solid var(--line); }
-  .sidebar { position: fixed; z-index: 40; inset: 0 auto 0 0; width: min(300px, 86vw); transform: translateX(-102%); transition: transform 200ms ease; box-shadow: var(--shadow-pop); }
+  .sidebar { position: fixed; z-index: 40; inset: 0 auto 0 0; height: auto; width: min(300px, 86vw); transform: translateX(-102%); transition: transform 200ms ease; box-shadow: var(--shadow-pop); overscroll-behavior: contain; }
   .sidebar.open { transform: none; }
   .sidebar-scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgb(10 20 22 / 0.4); }
   .main { padding: 24px 16px 64px; }
   h1 { font-size: 1.65rem; }
+}
+
+/* iPad portrait and other tablets: phone-style menu, but room to breathe. */
+@media (min-width: 600px) and (max-width: 900px) {
+  .main { padding: 28px 28px 64px; }
 }
 
 /* ----------------------------------------------------------- page chrome ---- */
@@ -274,15 +291,15 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* modal */
-.backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(20 24 28 / 0.4); display: grid; place-items: center; padding: 16px; }
-.modal { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); }
+.backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(20 24 28 / 0.4); display: grid; place-items: center; padding: 16px; overflow-y: auto; overscroll-behavior: contain; }
+.modal { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); }
 .modal.wide { max-width: 760px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 22px 6px; }
 .modal-body { padding: 12px 22px 18px; overflow: auto; display: grid; gap: 14px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding: 14px 22px; border-top: 1px solid var(--line); }
 
 /* ------------------------------------------------------------- welcome ---- */
-.welcome { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; }
+.welcome { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; }
 .welcome-panel {
   position: relative; display: flex; flex-direction: column; gap: 40px;
   padding: 36px clamp(28px, 5vw, 72px) 40px; background: var(--brand); color: var(--brand-ink);
@@ -321,8 +338,12 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .done-icon { color: var(--good); }
 
 @media (max-width: 900px) {
-  .welcome { grid-template-columns: 1fr; }
-  .welcome-panel { gap: 28px; padding: 24px 20px 28px; }
+  /* stacked (iPad portrait, phones): a short brand header so the form is on screen straight away */
+  .welcome { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .welcome-panel { gap: 16px; padding: 20px 24px 24px; }
+  .welcome-panel .welcome-highlights, .welcome-panel .welcome-steps { display: none; }
+  .welcome-panel .welcome-headline { font-size: 1.7rem; }
+  .welcome-panel .welcome-intro { margin-top: 8px; }
   .welcome-copy { margin-top: 0; }
   .welcome-headline { font-size: 2.2rem; }
   .welcome-intro { font-size: 1rem; }
@@ -496,7 +517,7 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 }
 
 /* ---- settings, guests, maintenance (v4) ---- */
-.public-frame { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.public-frame { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
 .public-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .public-bar a { text-decoration: none; color: inherit; }
 .public-links { display: flex; align-items: center; gap: 18px; font-weight: 500; font-size: 0.93rem; }
@@ -896,3 +917,17 @@ input[type='color'] { width: 38px; height: 38px; min-height: 0; padding: 2px; cu
 .consent-age { display: grid; gap: 2px; padding-top: 6px; border-top: 1px solid var(--line); }
 .legal-version { gap: 12px; flex-wrap: wrap; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .data-rights { display: grid; gap: 12px; }
+
+/* ---------- Touch screens (iPad, phones) ---------- */
+@media (pointer: coarse) {
+  /* Safari zooms the whole page when a field with text under 16px is tapped, and stays zoomed. */
+  input, select, textarea, .copy-row input { font-size: 16px; }
+  input:not([type='checkbox']):not([type='radio']):not([type='color']), select { min-height: 42px; }
+  .btn { min-height: 40px; }
+  .icon-btn { min-width: 40px; min-height: 40px; }
+  .nav-link { padding: 8px 10px; }
+  .more-items button { min-height: 40px; }
+  .check { min-height: 36px; }
+  /* no hover on touch: keep tap feedback instead of "stuck" hover colours */
+  * { -webkit-tap-highlight-color: transparent; }
+}
